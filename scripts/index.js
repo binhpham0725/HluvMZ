@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     HluvPostList.init({
         articlesId: 'articles',
-        filtersId: 'category-filters',
+        filtersId: 'home-category-filters-disabled',
         featuredId: 'featured-cats',
         loadMoreId: 'load-more',
         pageSize: 6
