@@ -112,6 +112,8 @@
 
     async function supabaseRest(path, options = {}) {
         const config = supabaseConfig();
+        const session = getAuthSession();
+        const token = options.accessToken || session?.access_token || config.key;
         const url = new URL(`${config.url}/rest/v1/${path}`);
         Object.entries(options.params || {}).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
@@ -121,7 +123,7 @@
 
         const headers = {
             apikey: config.key,
-            Authorization: `Bearer ${config.key}`,
+            Authorization: `Bearer ${token}`,
             ...(options.headers || {})
         };
         if (options.body !== undefined) headers['Content-Type'] = 'application/json';
