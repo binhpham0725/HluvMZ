@@ -1,0 +1,33 @@
+(function () {
+    window.HLUV_MESSAGES = {
+        networkError: 'Không thể kết nối máy chủ. Kiểm tra XAMPP, database và thử lại.',
+        loadPostsError: 'Không tải được danh sách bài viết.',
+        loadPostError: 'Không tải được chi tiết bài viết.',
+        emptyPosts: 'Chưa có bài viết để hiển thị.',
+        emptySearch: 'Không tìm thấy kết quả phù hợp.',
+        loginRequired: 'Vui lòng đăng nhập để dùng chức năng này.',
+        loginSuccess: 'Đăng nhập thành công.',
+        loginFailed: 'Đăng nhập thất bại.',
+        registerSuccess: 'Đăng ký thành công.',
+        registerFailed: 'Đăng ký thất bại.',
+        requiredFields: 'Vui lòng nhập đầy đủ thông tin.',
+        invalidEmail: 'Email chưa đúng định dạng.',
+        invalidAccountName: 'Tên tài khoản tối đa 12 ký tự và không dùng ký tự đặc biệt.',
+        passwordMismatch: 'Mật khẩu xác nhận không khớp.',
+        createPostSuccess: 'Đăng bài thành công.',
+        updatePostSuccess: 'Cập nhật bài viết thành công.',
+        deletePostSuccess: 'Xóa bài viết thành công.',
+        saveProfileSuccess: 'Cập nhật hồ sơ thành công.',
+        passwordVerified: 'Mật khẩu đúng. Bạn có thể đổi mật khẩu mới.',
+        passwordChangeSuccess: 'Đổi mật khẩu thành công.',
+        passwordChangeFailed: 'Không đổi được mật khẩu.',
+        commentCreateSuccess: 'Đã gửi bình luận.',
+        commentCreateFailed: 'Không gửi được bình luận.',
+        deleteCommentSuccess: 'Đã xóa bình luận.',
+        bookmarkAdded: 'Đã lưu bài viết.',
+        bookmarkRemoved: 'Đã bỏ lưu bài viết.',
+        confirmDeletePost: 'Bạn chắc chắn muốn xóa bài viết này?',
+        confirmDeleteComment: 'Bạn chắc chắn muốn xóa bình luận này?',
+        confirmLogout: 'Bạn chắc chắn muốn đăng xuất không?'
+    };
+})();
