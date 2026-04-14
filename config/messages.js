@@ -1,0 +1,17 @@
+export const MESSAGES = {
+  REQUIRED_FIELDS: "Vui lòng nhập đầy đủ thông tin.",
+  LOGIN_SUCCESS: "Đăng nhập thành công.",
+  LOGIN_FAILED: "Đăng nhập thất bại.",
+  REGISTER_SUCCESS: "Đăng ký thành công. Hãy đăng nhập.",
+  REGISTER_FAILED: "Đăng ký thất bại.",
+  PASSWORD_NOT_MATCH: "Mật khẩu xác nhận không khớp.",
+  POST_CREATE_SUCCESS: "Đăng bài thành công.",
+  POST_UPDATE_SUCCESS: "Cập nhật bài viết thành công.",
+  POST_DELETE_SUCCESS: "Xóa bài viết thành công.",
+  PROFILE_UPDATE_SUCCESS: "Cập nhật hồ sơ thành công.",
+  NO_DATA: "Không có dữ liệu.",
+  NOT_FOUND: "Không tìm thấy dữ liệu.",
+  LOGIN_REQUIRED: "Vui lòng đăng nhập trước.",
+  BOOKMARK_UPDATED: "Đã cập nhật bookmark.",
+  ERROR_COMMON: "Đã xảy ra lỗi. Vui lòng thử lại.",
+};

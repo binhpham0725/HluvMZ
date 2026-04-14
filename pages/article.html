@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết bài viết | Tạp chí ĐH Hoa Lư</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <div id="app-header"></div>
+
+  <main class="container">
+    <section class="article-shell">
+      <p class="story-meta" id="article-category">Chuyên mục</p>
+      <h1 id="article-title">Đang tải...</h1>
+
+      <div class="stat-list">
+        <span class="chip">Tác giả: <strong id="article-author">--</strong></span>
+        <span class="chip">Ngày đăng: <strong id="article-date">--</strong></span>
+        <span class="chip">Đọc: <strong id="article-readtime">--</strong></span>
+      </div>
+
+      <div class="article-actions">
+        <button id="bookmark-btn">Lưu bài</button>
+        <button id="share-btn">Chia sẻ</button>
+      </div>
+
+      <div class="article-cover">
+        <img id="article-image" src="../assets/images/placeholder.svg" alt="Ảnh bài viết">
+      </div>
+
+      <div id="article-content" class="article-content"></div>
+      <div id="tag-list" class="tag-list"></div>
+    </section>
+
+    <section class="section">
+      <h3>Có thể bạn quan tâm</h3>
+      <div id="related-post-list" class="story-grid"></div>
+    </section>
+  </main>
+
+  <button class="backtop" id="back-top">↑</button>
+
+  <div id="app-footer"></div>
+
+  <script type="module" src="../scripts/article.js"></script>
+</body>
+</html>

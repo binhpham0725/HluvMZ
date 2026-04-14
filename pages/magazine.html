@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magazine | Tạp chí ĐH Hoa Lư</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <div id="app-header"></div>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="story-meta">Magazine</p>
+        <h1>Tạp chí Đại học Hoa Lư</h1>
+        <p>Đọc các bài viết mới nhất, lọc theo chuyên mục và theo dõi nội dung nổi bật.</p>
+        <div id="magazine-category-filters" class="stat-list"></div>
+      </div>
+      <aside>
+        <h3>Top chủ đề</h3>
+        <div id="magazine-featured-categories" class="stat-list"></div>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <p class="story-meta">Tin mới</p>
+          <h2>Danh sách bài viết</h2>
+        </div>
+      </div>
+      <div id="magazine-post-list" class="story-grid"></div>
+    </section>
+  </main>
+
+  <div id="app-footer"></div>
+
+  <script type="module" src="../scripts/magazine.js"></script>
+</body>
+</html>

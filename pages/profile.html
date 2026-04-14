@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trang cá nhân | Tạp chí ĐH Hoa Lư</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <div id="app-header"></div>
+
+  <main class="container">
+    <section class="panel">
+      <div class="row-between">
+        <div class="profile-top">
+          <img id="profile-avatar" src="../assets/images/placeholder.svg" alt="Avatar">
+          <div>
+            <h2 id="profile-name">Người dùng</h2>
+            <p id="profile-email" style="color:var(--muted);"></p>
+          </div>
+        </div>
+        <button id="edit-profile-button">Chỉnh sửa</button>
+      </div>
+
+      <div class="stat-list">
+        <span class="chip">Bookmark: <strong id="bookmark-count">0</strong></span>
+        <span class="chip">Bài đăng: <strong id="post-count">0</strong></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Bài viết đã lưu</h3>
+      <div id="bookmark-list" class="story-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="row-between">
+        <h3>Bài viết của bạn</h3>
+      </div>
+      <div id="my-post-list" class="story-grid"></div>
+    </section>
+
+    <section class="panel">
+      <h3>Tạo / sửa bài viết</h3>
+      <form id="post-form">
+        <input type="hidden" id="post-id">
+        <div class="form-group">
+          <label for="post-title">Tiêu đề</label>
+          <input id="post-title" type="text" required>
+        </div>
+        <div class="form-group">
+          <label for="post-category">Chuyên mục</label>
+          <select id="post-category" required>
+            <option value="">Chọn chuyên mục</option>
+            <option value="Công nghệ">Công nghệ</option>
+            <option value="Đời sống">Đời sống</option>
+            <option value="Học tập">Học tập</option>
+            <option value="Giải trí">Giải trí</option>
+            <option value="Sự kiện">Sự kiện</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="post-image-url">Link ảnh</label>
+          <input id="post-image-url" type="url" placeholder="https://example.com/image.jpg">
+        </div>
+        <div class="form-group">
+          <label for="post-content">Nội dung</label>
+          <textarea id="post-content" rows="6" required></textarea>
+        </div>
+        <button type="submit" id="post-submit-button">Lưu bài viết</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <button id="logout-page-button">Đăng xuất</button>
+    </section>
+  </main>
+
+  <div id="app-footer"></div>
+
+  <script type="module" src="../scripts/profile.js"></script>
+</body>
+</html>
