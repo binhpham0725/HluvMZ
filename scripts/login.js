@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabLogin.addEventListener('click', () => showTab('login'));
     tabRegister.addEventListener('click', () => showTab('register'));
+    HluvUI.renderBubbles('.bubble-container', 30);
 
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();

@@ -26,6 +26,12 @@
     function renderHeader() {
         const header = document.querySelector('.site-header') || document.getElementById('site-header');
         if (!header || document.body.classList.contains('auth-page')) return;
+        if (!document.querySelector('.page-bubbles')) {
+            header.insertAdjacentHTML('beforebegin', `
+                <div class="bubble-container page-bubbles" aria-hidden="true"></div>
+            `);
+            HluvHelpers.renderBubbles('.page-bubbles', 35);
+        }
 
         header.className = 'site-header';
         header.innerHTML = `

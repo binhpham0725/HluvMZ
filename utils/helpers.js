@@ -125,6 +125,23 @@
         return canvas.toDataURL('image/jpeg', quality);
     }
 
+    function renderBubbles(container, count = 35) {
+        const target = typeof container === 'string' ? document.querySelector(container) : container;
+        if (!target) return;
+        target.innerHTML = '';
+        for (let i = 0; i < count; i += 1) {
+            const bubble = document.createElement('span');
+            const size = Math.random() * 80 + 20;
+            bubble.className = 'bubble';
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            bubble.style.left = `${Math.random() * 100}%`;
+            bubble.style.animationDuration = `${15 + Math.random() * 15}s`;
+            bubble.style.animationDelay = `${Math.random() * 10}s`;
+            target.appendChild(bubble);
+        }
+    }
+
     window.HluvHelpers = {
         escapeHtml,
         truncate,
@@ -137,7 +154,8 @@
         applyTheme,
         initThemeToggle,
         initBackTop,
-        imageFileToDataUrl
+        imageFileToDataUrl,
+        renderBubbles
     };
 
     window.HluvUI = {
@@ -153,6 +171,7 @@
         notify,
         handleError,
         isAdminUser,
+        renderBubbles,
         validateRequired: (values) => HluvValidators.required(values),
         isEmail: (value) => HluvValidators.email(value),
         isAccountName: (value) => HluvValidators.accountName(value),
