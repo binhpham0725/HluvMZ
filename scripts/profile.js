@@ -1,209 +1,224 @@
-import { renderHeader, initHeader } from "../components/header.js";
-import { renderFooter } from "../components/footer.js";
-import { createArticleCard, bindArticleCardClick } from "../components/articleCard.js";
-import { getCurrentUser, clearCurrentUser, setCurrentUser } from "../utils/storage.js";
-import { getUserProfile, updateUserProfile } from "../services/userService.js";
-import { getBookmarks } from "../services/bookmarkService.js";
-import { getPosts, createPost, updatePost, deletePost } from "../services/postService.js";
-import { validatePostForm } from "../utils/validators.js";
-
-document.getElementById("app-header").innerHTML = renderHeader();
-document.getElementById("app-footer").innerHTML = renderFooter();
-initHeader();
-
-const currentUser = getCurrentUser();
-
-if (!currentUser) {
-  alert("Vui lòng đăng nhập.");
-  window.location.href = "login.html";
-}
-
-const profileAvatar = document.getElementById("profile-avatar");
-const profileName = document.getElementById("profile-name");
-const profileEmail = document.getElementById("profile-email");
-const bookmarkCount = document.getElementById("bookmark-count");
-const postCount = document.getElementById("post-count");
-const bookmarkList = document.getElementById("bookmark-list");
-const myPostList = document.getElementById("my-post-list");
-
-const editProfileButton = document.getElementById("edit-profile-button");
-const logoutPageButton = document.getElementById("logout-page-button");
-
-const postForm = document.getElementById("post-form");
-const postIdInput = document.getElementById("post-id");
-const postTitleInput = document.getElementById("post-title");
-const postCategoryInput = document.getElementById("post-category");
-const postImageUrlInput = document.getElementById("post-image-url");
-const postContentInput = document.getElementById("post-content");
-
-async function loadProfile() {
-  try {
-    const user = await getUserProfile(currentUser.id);
-    profileAvatar.src =
-      user.avatar || `https://i.pravatar.cc/100?u=${encodeURIComponent(user.email)}`;
-    profileName.textContent = user.name || "Người dùng";
-    profileEmail.textContent = user.email || "";
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-async function loadBookmarks() {
-  try {
-    const bookmarks = await getBookmarks(currentUser.id);
-    bookmarkCount.textContent = bookmarks.length;
-    bookmarkList.innerHTML = bookmarks.length
-      ? bookmarks.map(createArticleCard).join("")
-      : `<div class="empty-box">Chưa có bài viết đã lưu.</div>`;
-    bindArticleCardClick("#bookmark-list");
-  } catch (error) {
-    bookmarkList.innerHTML = `<div class="empty-box">${error.message}</div>`;
-  }
-}
-
-async function loadMyPosts() {
-  try {
-    const posts = await getPosts();
-    const myPosts = posts.filter((item) => Number(item.user_id) === Number(currentUser.id));
-
-    postCount.textContent = myPosts.length;
-
-    if (!myPosts.length) {
-      myPostList.innerHTML = `<div class="empty-box">Bạn chưa có bài viết nào.</div>`;
-      return;
+document.addEventListener('DOMContentLoaded', async () => {
+    let user = HluvUI.getCurrentUser();
+    if (!user) {
+        HluvUI.notify(HLUV_MESSAGES.loginRequired, 'error');
+        window.location.href = 'login.html';
+        return;
     }
 
-    myPostList.innerHTML = myPosts
-      .map(
-        (post) => `
-          <div>
-            ${createArticleCard(post)}
-            <div class="stat-list" style="margin-top:10px;">
-              <button class="chip edit-post-btn" data-id="${post.id}">Sửa</button>
-              <button class="chip danger delete-post-btn" data-id="${post.id}">Xóa</button>
-            </div>
-          </div>
-        `
-      )
-      .join("");
-
-    bindArticleCardClick("#my-post-list");
-    bindPostActions(myPosts);
-  } catch (error) {
-    myPostList.innerHTML = `<div class="empty-box">${error.message}</div>`;
-  }
-}
-
-function bindPostActions(myPosts) {
-  document.querySelectorAll(".edit-post-btn").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const post = myPosts.find((item) => Number(item.id) === Number(button.dataset.id));
-      if (!post) return;
-
-      postIdInput.value = post.id;
-      postTitleInput.value = post.title || "";
-      postCategoryInput.value = post.category || "";
-      postImageUrlInput.value = post.image_url || "";
-      postContentInput.value = post.content || "";
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    });
-  });
-
-  document.querySelectorAll(".delete-post-btn").forEach((button) => {
-    button.addEventListener("click", async (event) => {
-      event.stopPropagation();
-
-      const id = Number(button.dataset.id);
-      if (!confirm("Bạn có chắc muốn xóa bài viết này?")) return;
-
-      try {
-        await deletePost(id);
-        alert("Xóa bài viết thành công.");
-        loadMyPosts();
-      } catch (error) {
-        alert(error.message);
-      }
-    });
-  });
-}
-
-editProfileButton.addEventListener("click", async () => {
-  const newName = prompt("Nhập tên mới:", profileName.textContent);
-  if (!newName) return;
-
-  const newAvatar = prompt("Nhập avatar URL mới:", profileAvatar.src) || "";
-
-  try {
-    await updateUserProfile({
-      id: currentUser.id,
-      name: newName.trim(),
-      bio: "",
-      avatar: newAvatar.trim(),
-    });
-
-    const updatedUser = {
-      ...currentUser,
-      name: newName.trim(),
-      avatar: newAvatar.trim(),
+    const els = {
+        fullname: document.getElementById('fullname'),
+        email: document.getElementById('email'),
+        profileExtra: document.getElementById('profile-extra'),
+        avatar: document.getElementById('avatar'),
+        bookmarkCount: document.getElementById('bookmark-count'),
+        postCount: document.getElementById('post-count'),
+        readCount: document.getElementById('read-count'),
+        editProfileBtn: document.getElementById('edit-profile-btn'),
+        modal: document.getElementById('edit-profile-modal'),
+        editProfileForm: document.getElementById('edit-profile-form'),
+        editName: document.getElementById('edit-name'),
+        editGender: document.getElementById('edit-gender'),
+        editBirthdate: document.getElementById('edit-birthdate'),
+        editAvatar: document.getElementById('edit-avatar'),
+        editAvatarFile: document.getElementById('edit-avatar-file'),
+        editAvatarPreview: document.getElementById('edit-avatar-preview'),
+        securityBtn: document.getElementById('security-btn'),
+        securityModal: document.getElementById('security-modal'),
+        securityCloseBtn: document.getElementById('security-close-btn'),
+        securityVerifyForm: document.getElementById('security-verify-form'),
+        securityCurrentPassword: document.getElementById('security-current-password'),
+        changePasswordForm: document.getElementById('change-password-form'),
+        newPassword: document.getElementById('new-password'),
+        confirmNewPassword: document.getElementById('confirm-new-password'),
+        logoutBtn: document.getElementById('logout-btn')
     };
-    setCurrentUser(updatedUser);
 
-    alert("Cập nhật hồ sơ thành công.");
-    loadProfile();
-    document.getElementById("app-header").innerHTML = renderHeader();
-    initHeader();
-  } catch (error) {
-    alert(error.message);
-  }
-});
+    let verifiedPassword = '';
 
-logoutPageButton.addEventListener("click", () => {
-  clearCurrentUser();
-  window.location.href = "index.html";
-});
-
-postForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  const payload = {
-    id: postIdInput.value ? Number(postIdInput.value) : undefined,
-    user_id: currentUser.id,
-    title: postTitleInput.value.trim(),
-    category: postCategoryInput.value.trim(),
-    image_url: postImageUrlInput.value.trim(),
-    content: postContentInput.value.trim(),
-  };
-
-  const validationMessage = validatePostForm(payload);
-  if (validationMessage) {
-    alert(validationMessage);
-    return;
-  }
-
-  try {
-    if (payload.id) {
-      await updatePost({
-        id: payload.id,
-        title: payload.title,
-        category: payload.category,
-        image_url: payload.image_url,
-        content: payload.content,
-      });
-      alert("Cập nhật bài viết thành công.");
-    } else {
-      await createPost(payload);
-      alert("Đăng bài thành công.");
+    function avatarUrl() {
+        return user.avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(user.email || user.name || 'guest')}`;
     }
 
-    postForm.reset();
-    postIdInput.value = "";
-    loadMyPosts();
-  } catch (error) {
-    alert(error.message);
-  }
-});
+    function renderUser() {
+        els.fullname.textContent = user.name || 'Người dùng';
+        els.email.textContent = user.email || '';
+        const extras = [];
+        if (user.gender) extras.push(`Giới tính: ${user.gender}`);
+        if (user.birthdate) extras.push(`Ngày sinh: ${HluvUI.formatDate(user.birthdate)}`);
+        els.profileExtra.textContent = extras.join(' · ');
+        els.avatar.src = avatarUrl();
+        els.avatar.onerror = () => {
+            els.avatar.src = `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(user.email || user.name || 'guest')}`;
+        };
 
-await loadProfile();
-await loadBookmarks();
-await loadMyPosts();
+        const headerAvatar = document.querySelector('.user-area img');
+        const headerName = document.querySelector('.user-name');
+        if (headerAvatar) headerAvatar.src = els.avatar.src;
+        if (headerName) headerName.textContent = user.name || user.email || 'Người dùng';
+    }
+
+    async function renderCounts() {
+        try {
+            const [bookmarks, posts] = await Promise.all([
+                HluvBookmarkService.list(user.id),
+                HluvPostService.list({ user_id: user.id })
+            ]);
+            els.bookmarkCount.textContent = bookmarks.length;
+            els.postCount.textContent = posts.length;
+        } catch (error) {
+            HluvUI.handleError(error, 'Không tải được thống kê hồ sơ.');
+        }
+
+        const progress = HluvStorage.getJson(HLUV_CONFIG.storageKeys.readProgress, {});
+        els.readCount.textContent = Object.keys(progress).length;
+    }
+
+    async function updateProfile(event) {
+        event.preventDefault();
+        const submitBtn = els.editProfileForm.querySelector('button[type="submit"]');
+        const payload = {
+            id: user.id,
+            name: els.editName.value.trim(),
+            gender: els.editGender.value.trim(),
+            birthdate: els.editBirthdate.value.trim(),
+            bio: user.bio || '',
+            avatar: els.editAvatar.value.trim() || user.avatar || ''
+        };
+        if (!payload.name) {
+            HluvUI.notify('Tên không được để trống.', 'error');
+            return;
+        }
+
+        HluvUI.setButtonLoading(submitBtn, true, 'Đang lưu...');
+        try {
+            const data = await HluvUserService.update(payload);
+            user = data.user || { ...user, ...payload };
+            HluvUI.setCurrentUser(user);
+            renderUser();
+            els.modal.classList.remove('active');
+            HluvUI.notify(HLUV_MESSAGES.saveProfileSuccess, 'success');
+        } catch (error) {
+            HluvUI.handleError(error, 'Không cập nhật được hồ sơ.');
+        } finally {
+            HluvUI.setButtonLoading(submitBtn, false);
+        }
+    }
+
+    function resetSecurityModal() {
+        verifiedPassword = '';
+        els.securityVerifyForm.reset();
+        els.changePasswordForm.reset();
+        els.securityVerifyForm.hidden = false;
+        els.changePasswordForm.hidden = true;
+    }
+
+    async function verifyCurrentPassword(event) {
+        event.preventDefault();
+        const password = els.securityCurrentPassword.value.trim();
+        const submitBtn = els.securityVerifyForm.querySelector('button[type="submit"]');
+        if (!password) {
+            HluvUI.notify('Vui lòng nhập mật khẩu hiện tại.', 'error');
+            return;
+        }
+
+        HluvUI.setButtonLoading(submitBtn, true, 'Đang xác minh...');
+        try {
+            await HluvUserService.verifyPassword(user.id, password);
+            verifiedPassword = password;
+            els.securityVerifyForm.hidden = true;
+            els.changePasswordForm.hidden = false;
+            els.newPassword.focus();
+            HluvUI.notify(HLUV_MESSAGES.passwordVerified, 'success');
+        } catch (error) {
+            HluvUI.handleError(error, 'Mật khẩu hiện tại không đúng.');
+        } finally {
+            HluvUI.setButtonLoading(submitBtn, false);
+        }
+    }
+
+    async function changePassword(event) {
+        event.preventDefault();
+        const newPassword = els.newPassword.value.trim();
+        const confirmNewPassword = els.confirmNewPassword.value.trim();
+        const submitBtn = els.changePasswordForm.querySelector('button[type="submit"]');
+
+        if (!verifiedPassword) {
+            HluvUI.notify('Vui lòng xác minh mật khẩu hiện tại trước.', 'error');
+            resetSecurityModal();
+            return;
+        }
+        if (newPassword.length < 6) {
+            HluvUI.notify('Mật khẩu mới tối thiểu 6 ký tự.', 'error');
+            return;
+        }
+        if (newPassword !== confirmNewPassword) {
+            HluvUI.notify(HLUV_MESSAGES.passwordMismatch, 'error');
+            return;
+        }
+
+        HluvUI.setButtonLoading(submitBtn, true, 'Đang cập nhật...');
+        try {
+            await HluvUserService.changePassword(user.id, verifiedPassword, newPassword);
+            els.securityModal.classList.remove('active');
+            resetSecurityModal();
+            HluvUI.notify(HLUV_MESSAGES.passwordChangeSuccess, 'success');
+        } catch (error) {
+            HluvUI.handleError(error, HLUV_MESSAGES.passwordChangeFailed);
+        } finally {
+            HluvUI.setButtonLoading(submitBtn, false);
+        }
+    }
+
+    els.editProfileBtn.addEventListener('click', () => {
+        els.editName.value = user.name || '';
+        els.editGender.value = user.gender || '';
+        els.editBirthdate.value = user.birthdate || '';
+        els.editAvatar.value = user.avatar || '';
+        els.editAvatarPreview.src = avatarUrl();
+        els.editAvatarPreview.style.display = 'block';
+        els.modal.classList.add('active');
+    });
+
+    els.editAvatar.addEventListener('input', () => {
+        els.editAvatarPreview.src = els.editAvatar.value.trim() || avatarUrl();
+        els.editAvatarPreview.style.display = 'block';
+    });
+
+    els.editAvatarFile.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const dataUrl = await HluvUI.imageFileToDataUrl(file, 420, 0.82);
+        els.editAvatar.value = dataUrl;
+        els.editAvatarPreview.src = dataUrl;
+        els.editAvatarPreview.style.display = 'block';
+    });
+
+    els.editProfileForm.addEventListener('submit', updateProfile);
+    els.securityBtn.addEventListener('click', () => {
+        resetSecurityModal();
+        els.securityModal.classList.add('active');
+        els.securityCurrentPassword.focus();
+    });
+    els.securityCloseBtn.addEventListener('click', () => {
+        els.securityModal.classList.remove('active');
+        resetSecurityModal();
+    });
+    els.securityVerifyForm.addEventListener('submit', verifyCurrentPassword);
+    els.changePasswordForm.addEventListener('submit', changePassword);
+    els.logoutBtn.addEventListener('click', () => {
+        if (!confirm(HLUV_MESSAGES.confirmLogout)) return;
+        HluvUI.clearCurrentUser();
+        window.location.href = 'login.html';
+    });
+
+    window.setGravatarAvatar = function setGravatarAvatar() {
+        const avatar = `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(user.email || user.id)}`;
+        els.editAvatar.value = avatar;
+        els.editAvatarPreview.src = avatar;
+        els.editAvatarPreview.style.display = 'block';
+    };
+
+    renderUser();
+    renderCounts();
+});

@@ -1,129 +1,250 @@
-import { renderHeader, initHeader } from "../components/header.js";
-import { renderFooter } from "../components/footer.js";
-import { createArticleCard, bindArticleCardClick } from "../components/articleCard.js";
-import { getPostById, getPosts } from "../services/postService.js";
-import { checkBookmark, toggleBookmark } from "../services/bookmarkService.js";
-import { getCurrentUser } from "../utils/storage.js";
-import { getQueryParam, formatDate, estimateReadTime } from "../utils/helpers.js";
+document.addEventListener('DOMContentLoaded', async () => {
+    const params = new URLSearchParams(window.location.search);
+    const postId = Number(params.get('id'));
+    const currentUser = HluvUI.getCurrentUser();
 
-document.getElementById("app-header").innerHTML = renderHeader();
-document.getElementById("app-footer").innerHTML = renderFooter();
-initHeader();
+    const els = {
+        title: document.getElementById('article-title'),
+        category: document.getElementById('article-category'),
+        author: document.getElementById('article-author'),
+        date: document.getElementById('article-date'),
+        readtime: document.getElementById('article-readtime'),
+        image: document.getElementById('article-image'),
+        content: document.getElementById('article-content'),
+        tags: document.getElementById('tag-list'),
+        related: document.getElementById('related'),
+        bookmarkBtn: document.getElementById('bookmark-btn'),
+        likeBtn: document.getElementById('like-btn'),
+        likeCount: document.getElementById('like-count'),
+        shareBtn: document.getElementById('share-btn'),
+        commentForm: document.getElementById('comment-form'),
+        commentContent: document.getElementById('comment-content'),
+        commentList: document.getElementById('comment-list'),
+        commentCount: document.getElementById('comment-count')
+    };
 
-const articleId = getQueryParam("id");
-const currentUser = getCurrentUser();
+    let article = null;
 
-const categoryEl = document.getElementById("article-category");
-const titleEl = document.getElementById("article-title");
-const authorEl = document.getElementById("article-author");
-const dateEl = document.getElementById("article-date");
-const readTimeEl = document.getElementById("article-readtime");
-const imageEl = document.getElementById("article-image");
-const contentEl = document.getElementById("article-content");
-const tagListEl = document.getElementById("tag-list");
-const relatedListEl = document.getElementById("related-post-list");
-const bookmarkBtn = document.getElementById("bookmark-btn");
-const shareBtn = document.getElementById("share-btn");
-const backTop = document.getElementById("back-top");
+    function renderArticle(post) {
+        const words = String(post.content || '').trim().split(/\s+/).filter(Boolean).length;
+        const readMinutes = Math.max(1, Math.ceil(words / 220));
+        els.title.textContent = post.title || 'Không có tiêu đề';
+        els.category.textContent = post.category || 'Tin tức';
+        els.author.textContent = post.author_name || 'Ban biên tập';
+        els.date.textContent = HluvUI.formatDate(post.created_at);
+        els.readtime.textContent = `${readMinutes} phút đọc`;
+        els.image.src = post.image_url || HLUV_CONFIG.placeholderImage;
+        els.image.alt = post.title || '';
 
-let currentPost = null;
+        const paragraphs = String(post.content || '')
+            .split(/\n+/)
+            .map((paragraph) => paragraph.trim())
+            .filter(Boolean)
+            .map((paragraph) => `<p>${HluvUI.escapeHtml(paragraph)}</p>`)
+            .join('');
+        els.content.innerHTML = paragraphs || '<p>Nội dung đang được cập nhật.</p>';
 
-async function loadArticle() {
-  if (!articleId) {
-    titleEl.textContent = "Không tìm thấy bài viết";
-    return;
-  }
+        els.tags.innerHTML = '';
+        [post.category || 'Tin tức'].forEach((tag) => {
+            const span = document.createElement('span');
+            span.className = 'tag-pill';
+            span.textContent = tag;
+            els.tags.appendChild(span);
+        });
+    }
 
-  try {
-    const post = await getPostById(articleId);
-    currentPost = post;
+    async function renderRelated(category) {
+        HluvUI.renderState(els.related, 'Đang tải bài liên quan...');
+        try {
+            const related = await HluvApi.posts.list({ category });
+            const items = related.filter((item) => Number(item.id) !== postId).slice(0, 4);
+            els.related.innerHTML = '';
+            if (!items.length) {
+                HluvUI.renderState(els.related, 'Chưa có bài viết liên quan.');
+                return;
+            }
+            items.forEach((item) => els.related.appendChild(HluvUI.renderPostCard(item, { className: 'cardsmall', compact: true, showDate: false })));
+        } catch (error) {
+            HluvUI.renderState(els.related, 'Không tải được bài liên quan.', 'error');
+        }
+    }
 
-    categoryEl.textContent = post.category || "Chuyên mục";
-    titleEl.textContent = post.title || "Không có tiêu đề";
-    authorEl.textContent = post.author_name || "Ban biên tập";
-    dateEl.textContent = formatDate(post.created_at);
-    readTimeEl.textContent = `${estimateReadTime(post.content)} phút`;
-    imageEl.src = post.image_url || "../assets/images/placeholder.svg";
-    contentEl.textContent = post.content || "";
+    function syncCommentForm() {
+        if (!els.commentForm || !els.commentContent) return;
+        if (currentUser) {
+            els.commentContent.disabled = false;
+            els.commentContent.placeholder = 'Viết bình luận của bạn...';
+            els.commentForm.querySelector('button[type="submit"]').disabled = false;
+            return;
+        }
+        els.commentContent.disabled = true;
+        els.commentContent.placeholder = 'Đăng nhập để bình luận.';
+        els.commentForm.querySelector('button[type="submit"]').disabled = true;
+    }
 
-    tagListEl.innerHTML = `
-      <span class="tag-pill">${post.category || "Bài viết"}</span>
-    `;
+    async function renderComments() {
+        if (!els.commentList || !els.commentCount) return;
+        HluvUI.renderState(els.commentList, 'Đang tải bình luận...');
+        try {
+            const comments = await HluvApi.comments.list(postId);
+            els.commentCount.textContent = `${comments.length} bình luận`;
+            els.commentList.innerHTML = '';
+            if (!comments.length) {
+                HluvUI.renderState(els.commentList, 'Chưa có bình luận nào. Hãy là người đầu tiên chia sẻ ý kiến.');
+                return;
+            }
 
-    await loadRelatedPosts(post.category, Number(post.id));
-    await refreshBookmarkButton();
-  } catch (error) {
-    titleEl.textContent = error.message;
-  }
-}
+            comments.forEach((comment) => {
+                const item = document.createElement('div');
+                item.className = 'comment-item';
+                const avatar = comment.author_avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(comment.author_name || comment.user_id || 'guest')}`;
+                item.innerHTML = `
+                    <img class="comment-avatar" src="${HluvUI.escapeHtml(avatar)}" alt="">
+                    <div class="comment-body">
+                        <div class="comment-head">
+                            <strong>${HluvUI.escapeHtml(comment.author_name || 'Người dùng')}</strong>
+                            <small>${HluvUI.formatDate(comment.created_at)}</small>
+                        </div>
+                        <p>${HluvUI.escapeHtml(comment.content || '')}</p>
+                    </div>
+                `;
+                els.commentList.appendChild(item);
+            });
+        } catch (error) {
+            HluvUI.renderState(els.commentList, 'Không tải được bình luận.', 'error');
+        }
+    }
 
-async function loadRelatedPosts(category, postId) {
-  try {
-    const posts = await getPosts({ category });
-    const related = posts.filter((item) => Number(item.id) !== postId).slice(0, 3);
+    async function submitComment(event) {
+        event.preventDefault();
+        if (!currentUser) {
+            HluvUI.notify(HLUV_MESSAGES.loginRequired, 'error');
+            return;
+        }
+        const content = els.commentContent.value.trim();
+        if (!content) {
+            HluvUI.notify('Vui lòng nhập nội dung bình luận.', 'error');
+            return;
+        }
 
-    relatedListEl.innerHTML = related.length
-      ? related.map(createArticleCard).join("")
-      : `<div class="empty-box">Chưa có bài liên quan.</div>`;
+        const submitBtn = els.commentForm.querySelector('button[type="submit"]');
+        HluvUI.setButtonLoading(submitBtn, true, 'Đang gửi...');
+        try {
+            await HluvApi.comments.create({ post_id: postId, user_id: currentUser.id, content });
+            els.commentContent.value = '';
+            HluvUI.notify(HLUV_MESSAGES.commentCreateSuccess, 'success');
+            await renderComments();
+        } catch (error) {
+            HluvUI.handleError(error, HLUV_MESSAGES.commentCreateFailed);
+        } finally {
+            HluvUI.setButtonLoading(submitBtn, false);
+        }
+    }
 
-    bindArticleCardClick("#related-post-list");
-  } catch (error) {
-    relatedListEl.innerHTML = `<div class="empty-box">${error.message}</div>`;
-  }
-}
+    async function refreshBookmarkButton() {
+        if (!els.bookmarkBtn) return;
+        if (!currentUser) {
+            els.bookmarkBtn.textContent = 'Đăng nhập để lưu';
+            return;
+        }
+        try {
+            const data = await HluvApi.bookmarks.check(currentUser.id, postId);
+            els.bookmarkBtn.textContent = data.bookmarked ? 'Đã lưu' : 'Lưu bài';
+        } catch (error) {
+            els.bookmarkBtn.textContent = 'Lưu bài';
+        }
+    }
 
-async function refreshBookmarkButton() {
-  if (!currentUser || !currentPost) {
-    bookmarkBtn.textContent = "Đăng nhập để lưu";
-    return;
-  }
+    async function refreshLikeButton() {
+        if (!els.likeBtn || !els.likeCount) return;
+        try {
+            const count = await HluvApi.likes.count(postId);
+            els.likeCount.textContent = count.total || 0;
+            if (currentUser) {
+                const check = await HluvApi.likes.check(currentUser.id, postId);
+                els.likeBtn.textContent = check.liked ? 'Đã thích' : 'Thích';
+            }
+        } catch (error) {
+            els.likeCount.textContent = '0';
+        }
+    }
 
-  try {
-    const result = await checkBookmark(currentUser.id, currentPost.id);
-    bookmarkBtn.textContent = result.bookmarked ? "Đã lưu" : "Lưu bài";
-  } catch {
-    bookmarkBtn.textContent = "Lưu bài";
-  }
-}
+    async function toggleBookmark() {
+        if (!currentUser) {
+            HluvUI.notify(HLUV_MESSAGES.loginRequired, 'error');
+            return;
+        }
+        HluvUI.setButtonLoading(els.bookmarkBtn, true);
+        try {
+            const result = await HluvApi.bookmarks.toggle(currentUser.id, postId);
+            HluvUI.notify(result.added ? HLUV_MESSAGES.bookmarkAdded : HLUV_MESSAGES.bookmarkRemoved, 'success');
+            await refreshBookmarkButton();
+        } catch (error) {
+            HluvUI.handleError(error, 'Không cập nhật được bookmark.');
+        } finally {
+            HluvUI.setButtonLoading(els.bookmarkBtn, false);
+            await refreshBookmarkButton();
+        }
+    }
 
-bookmarkBtn.addEventListener("click", async () => {
-  if (!currentUser) {
-    alert("Vui lòng đăng nhập để lưu bài.");
-    window.location.href = "login.html";
-    return;
-  }
+    async function toggleLike() {
+        if (!currentUser) {
+            HluvUI.notify(HLUV_MESSAGES.loginRequired, 'error');
+            return;
+        }
+        HluvUI.setButtonLoading(els.likeBtn, true);
+        try {
+            const result = await HluvApi.likes.toggle(currentUser.id, postId);
+            els.likeBtn.textContent = result.liked ? 'Đã thích' : 'Thích';
+            await refreshLikeButton();
+        } catch (error) {
+            HluvUI.handleError(error, 'Không cập nhật được lượt thích.');
+        } finally {
+            HluvUI.setButtonLoading(els.likeBtn, false);
+            await refreshLikeButton();
+        }
+    }
 
-  if (!currentPost) return;
+    async function shareArticle() {
+        const payload = {
+            title: els.title.textContent,
+            text: 'Hãy xem bài viết này trên Tạp chí ĐH Hoa Lư',
+            url: window.location.href
+        };
+        if (navigator.share) {
+            await navigator.share(payload);
+            return;
+        }
+        await navigator.clipboard?.writeText(window.location.href);
+        HluvUI.notify('Đã sao chép liên kết bài viết.', 'success');
+    }
 
-  try {
-    await toggleBookmark(currentUser.id, currentPost.id);
-    await refreshBookmarkButton();
-    alert("Đã cập nhật bookmark.");
-  } catch (error) {
-    alert(error.message);
-  }
+    function markRead() {
+        const key = HLUV_CONFIG.storageKeys.readProgress;
+        const progress = JSON.parse(localStorage.getItem(key) || '{}');
+        progress[postId] = { readAt: new Date().toISOString(), title: article?.title || '' };
+        localStorage.setItem(key, JSON.stringify(progress));
+    }
+
+    if (!postId) {
+        els.title.textContent = 'Bài viết không hợp lệ';
+        return;
+    }
+
+    els.bookmarkBtn.addEventListener('click', toggleBookmark);
+    els.likeBtn?.addEventListener('click', toggleLike);
+    els.shareBtn.addEventListener('click', () => shareArticle().catch((error) => HluvUI.handleError(error, 'Không thể chia sẻ bài viết.')));
+    els.commentForm?.addEventListener('submit', submitComment);
+    syncCommentForm();
+
+    try {
+        article = await HluvApi.posts.get(postId);
+        renderArticle(article);
+        markRead();
+        await Promise.all([renderRelated(article.category), refreshBookmarkButton(), refreshLikeButton(), renderComments()]);
+    } catch (error) {
+        els.title.textContent = 'Bài viết không tìm thấy';
+        els.content.innerHTML = '';
+        HluvUI.handleError(error, HLUV_MESSAGES.loadPostError);
+    }
 });
-
-shareBtn.addEventListener("click", async () => {
-  if (!currentPost) return;
-
-  if (navigator.share) {
-    await navigator.share({
-      title: currentPost.title,
-      text: "Xem bài viết này",
-      url: window.location.href,
-    });
-  } else {
-    prompt("Sao chép liên kết:", window.location.href);
-  }
-});
-
-backTop.addEventListener("click", () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-
-window.addEventListener("scroll", () => {
-  backTop.style.display = window.scrollY > 300 ? "flex" : "none";
-});
-
-loadArticle();

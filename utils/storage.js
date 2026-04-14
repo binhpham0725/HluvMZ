@@ -1,25 +1,30 @@
-import { STORAGE_KEYS } from "../config/constants.js";
+(function () {
+    function getJson(key, fallback = null) {
+        try {
+            return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+        } catch (error) {
+            return fallback;
+        }
+    }
 
-export function getCurrentUser() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.CURRENT_USER) || "null");
-  } catch {
-    return null;
-  }
-}
+    function setJson(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
 
-export function setCurrentUser(user) {
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-}
-
-export function clearCurrentUser() {
-  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-}
-
-export function getTheme() {
-  return localStorage.getItem(STORAGE_KEYS.THEME) || "light";
-}
-
-export function setTheme(theme) {
-  localStorage.setItem(STORAGE_KEYS.THEME, theme);
-}
+    window.HluvStorage = {
+        getJson,
+        setJson,
+        remove(key) {
+            localStorage.removeItem(key);
+        },
+        getCurrentUser() {
+            return getJson(HLUV_CONFIG.storageKeys.currentUser, null);
+        },
+        setCurrentUser(user) {
+            setJson(HLUV_CONFIG.storageKeys.currentUser, user);
+        },
+        clearCurrentUser() {
+            localStorage.removeItem(HLUV_CONFIG.storageKeys.currentUser);
+        }
+    };
+})();

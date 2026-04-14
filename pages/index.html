@@ -4,74 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tạp chí ĐH Hoa Lư | Trang chủ</title>
-    <link rel="stylesheet" href="../css/index.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css" />
 </head>
 <body>
     <div class="sticky-progress" id="reading-progress"></div>
-
-    <header class="site-header">
-        <div class="site-nav">
-            <a class="brand" href="index.html">Tạp Chí ĐH Hoa Lư</a>
-
-            <nav class="nav-links" aria-label="menu">
-                <a href="index.html" class="active">Home</a>
-                <a href="magazine.html">Magazine</a>
-                <a href="category.html?id=0">Tin tức</a>
-                <a href="about.html">Giới thiệu</a>
-                <a href="search.html">Tìm kiếm</a>
-                <a href="login.html">Đăng nhập</a>
-            </nav>
-
-            <button class="menu-toggle" id="menu-toggle">☰</button>
-
-            <div class="actions">
-                <button class="chip" id="theme-toggle">Dark Mode</button>
+    <header class="site-header" id="site-header"></header>
+    <main>
+        <section class="hero">
+            <div class="hero-main">
+                <p class="story-meta">Magazine Online</p>
+                <h1>Website Tạp Chí Đại học Hoa Lư - Công nghệ, Đời sống, Học tập, Giải trí</h1>
+                <p>Chào mừng bạn đến với nền tảng tin tức học thuật và phong cách sống dành cho sinh viên ĐH Hoa Lư.</p>
+                <div class="filters" id="category-filters"></div>
             </div>
-        </div>
-    </header>
-
-    <main class="container-page">
-        <section class="hero hero-large" id="hero-banner">
-            <div class="hero-main hero-cover">
-                <div class="hero-overlay">
-                    <p class="story-meta">Magazine Online</p>
-                    <h1 id="hero-title">Website Tạp Chí Đại học Hoa Lư</h1>
-                    <p id="hero-desc">
-                        Chào mừng bạn đến với nền tảng tin tức học thuật và phong cách sống dành cho sinh viên ĐH Hoa Lư.
-                    </p>
-
-                    <div class="hero-actions">
-                        <a href="magazine.html" class="chip chip-solid">Khám phá ngay</a>
-                        <a href="search.html" class="chip">Tìm kiếm bài viết</a>
-                    </div>
-
-                    <div class="filters" id="category-filters"></div>
-                </div>
-            </div>
-
-            <aside class="right-aside aside-stack">
-                <div class="aside-card">
-                    <h3>Chuyên mục nổi bật</h3>
-                    <div class="featured-cats" id="featured-cats"></div>
-                </div>
-
-                <div class="aside-card">
-                    <h3>Xu hướng</h3>
-                    <div id="trending-posts" class="trending-posts"></div>
-                </div>
+            <aside class="right-aside p-3">
+                <h3>Chuyên mục nổi bật</h3>
+                <div class="featured-cats" id="featured-cats"></div>
             </aside>
         </section>
-
-        <section class="section">
-            <div class="section-heading">
-                <div>
-                    <p class="story-meta">Tiêu điểm hôm nay</p>
-                    <h2>Bài viết nổi bật</h2>
-                </div>
-            </div>
-            <div id="featured-articles" class="featured-grid"></div>
-        </section>
-
         <section id="news" class="section">
             <div class="section-heading">
                 <div>
@@ -82,45 +36,28 @@
             </div>
             <div id="articles" class="story-grid"></div>
         </section>
-
-        <section class="section two-col">
-            <div>
-                <div class="section-heading">
-                    <div>
-                        <p class="story-meta">Theo chuyên mục</p>
-                        <h2>Công nghệ</h2>
-                    </div>
-                </div>
-                <div id="technology-posts" class="story-grid single-col"></div>
-            </div>
-
-            <aside class="right-aside aside-stack">
-                <div class="aside-card">
-                    <h3>Tìm nhanh</h3>
-                    <div class="quick-search">
-                        <input type="text" id="quick-search-input" placeholder="Nhập từ khóa..." />
-                        <button class="chip chip-solid" id="quick-search-btn">Tìm</button>
-                    </div>
-                </div>
-
-                <div class="aside-card">
-                    <h3>Đời sống sinh viên</h3>
-                    <div id="life-posts" class="mini-post-list"></div>
-                </div>
-            </aside>
-        </section>
-
         <section id="about" class="section">
-            <h2>Về Tạp Chí</h2>
-            <p class="muted-text">
-                Nền tảng của cộng đồng Đại học Hoa Lư với nội dung: tin tức học thuật, hướng nghiệp, trải nghiệm, sự kiện.
-            </p>
+            <div class="panel">
+                <h2>Về Tạp Chí</h2>
+                <p style="color:var(--muted);">Nền tảng của cộng đồng Đại học Hoa Lư với nội dung: tin tức học thuật, hướng nghiệp, trải nghiệm, sự kiện.</p>
+            </div>
         </section>
     </main>
-
     <button id="back-top">↑</button>
-
-    <script src="../js/index.js"></script>
-    <script src="hluv-header.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../config/constants.js"></script>
+    <script src="../config/messages.js"></script>
+    <script src="../utils/storage.js"></script>
+    <script src="../utils/validators.js"></script>
+    <script src="../utils/helpers.js"></script>
+    <script src="../services/api.js"></script>
+    <script src="../services/postService.js"></script>
+    <script src="../services/userService.js"></script>
+    <script src="../services/bookmarkService.js"></script>
+    <script src="../services/authService.js"></script>
+    <script src="../components/articleCard.js"></script>
+    <script src="../components/header.js"></script>
+    <script src="../components/footer.js"></script>
+    <script src="../scripts/index.js"></script>
 </body>
 </html>

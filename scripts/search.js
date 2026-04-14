@@ -1,42 +1,43 @@
-import { renderHeader, initHeader } from "../components/header.js";
-import { renderFooter } from "../components/footer.js";
-import { createArticleCard, bindArticleCardClick } from "../components/articleCard.js";
-import { getPosts } from "../services/postService.js";
-import { getQueryParam } from "../utils/helpers.js";
+document.addEventListener('DOMContentLoaded', () => {
+    const result = document.getElementById('search-result');
+    const inputSearch = document.getElementById('input-search');
+    const btnSearch = document.getElementById('btn-search');
 
-document.getElementById("app-header").innerHTML = renderHeader("search");
-document.getElementById("app-footer").innerHTML = renderFooter();
-initHeader();
+    async function search() {
+        const q = inputSearch.value.trim();
+        if (!q) {
+            HluvUI.renderState(result, 'Nhập từ khóa để bắt đầu tìm kiếm.');
+            return;
+        }
 
-const searchInput = document.getElementById("search-input");
-const searchButton = document.getElementById("search-button");
-const resultList = document.getElementById("search-result-list");
+        HluvUI.renderState(result, 'Đang tìm kiếm...');
+        HluvUI.setButtonLoading(btnSearch, true, 'Đang tìm...');
+        try {
+            const posts = await HluvApi.posts.list({ q });
+            result.innerHTML = '';
+            if (!posts.length) {
+                HluvUI.renderState(result, HLUV_MESSAGES.emptySearch);
+                return;
+            }
+            posts.forEach((post) => result.appendChild(HluvUI.renderPostCard(post)));
+        } catch (error) {
+            HluvUI.renderState(result, error.message || HLUV_MESSAGES.loadPostsError, 'error');
+            HluvUI.handleError(error, HLUV_MESSAGES.loadPostsError);
+        } finally {
+            HluvUI.setButtonLoading(btnSearch, false);
+        }
+    }
 
-async function searchPosts() {
-  const q = searchInput.value.trim();
-  if (!q) {
-    resultList.innerHTML = `<div class="empty-box">Nhập từ khóa để tìm kiếm.</div>`;
-    return;
-  }
+    btnSearch.addEventListener('click', search);
+    inputSearch.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') search();
+    });
 
-  try {
-    const posts = await getPosts({ q });
-    resultList.innerHTML = posts.length
-      ? posts.map(createArticleCard).join("")
-      : `<div class="empty-box">Không tìm thấy kết quả.</div>`;
-    bindArticleCardClick("#search-result-list");
-  } catch (error) {
-    resultList.innerHTML = `<div class="empty-box">${error.message}</div>`;
-  }
-}
-
-searchButton.addEventListener("click", searchPosts);
-searchInput.addEventListener("keyup", (event) => {
-  if (event.key === "Enter") searchPosts();
+    const initialQuery = new URLSearchParams(window.location.search).get('q');
+    if (initialQuery) {
+        inputSearch.value = initialQuery;
+        search();
+    } else {
+        HluvUI.renderState(result, 'Nhập từ khóa để bắt đầu tìm kiếm.');
+    }
 });
-
-const initialQuery = getQueryParam("q");
-if (initialQuery) {
-  searchInput.value = initialQuery;
-  searchPosts();
-}

@@ -1,68 +1,78 @@
-import { login, register } from "../services/authService.js";
-import { setCurrentUser } from "../utils/storage.js";
-import { validateLogin, validateRegister } from "../utils/validators.js";
+document.addEventListener('DOMContentLoaded', () => {
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
 
-const tabLogin = document.getElementById("tab-login");
-const tabRegister = document.getElementById("tab-register");
-const loginForm = document.getElementById("login-form");
-const registerForm = document.getElementById("register-form");
+    function showTab(tab) {
+        const isLogin = tab === 'login';
+        tabLogin.classList.toggle('active', isLogin);
+        tabRegister.classList.toggle('active', !isLogin);
+        loginForm.style.display = isLogin ? 'block' : 'none';
+        registerForm.style.display = isLogin ? 'none' : 'block';
+    }
 
-tabLogin.addEventListener("click", () => {
-  tabLogin.classList.add("active");
-  tabRegister.classList.remove("active");
-  loginForm.style.display = "block";
-  registerForm.style.display = "none";
-});
+    tabLogin.addEventListener('click', () => showTab('login'));
+    tabRegister.addEventListener('click', () => showTab('register'));
 
-tabRegister.addEventListener("click", () => {
-  tabRegister.classList.add("active");
-  tabLogin.classList.remove("active");
-  registerForm.style.display = "block";
-  loginForm.style.display = "none";
-});
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitBtn = loginForm.querySelector('button[type="submit"]');
+        const email = document.getElementById('email-login').value.trim();
+        const password = document.getElementById('password-login').value.trim();
 
-loginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+        if (!HluvUI.validateRequired([email, password])) return HluvUI.notify(HLUV_MESSAGES.requiredFields, 'error');
+        if (!HluvUI.isEmail(email)) return HluvUI.notify(HLUV_MESSAGES.invalidEmail, 'error');
 
-  const email = document.getElementById("login-email").value.trim();
-  const password = document.getElementById("login-password").value.trim();
+        HluvUI.setButtonLoading(submitBtn, true, 'Đang đăng nhập...');
+        try {
+            const data = await HluvApi.users.login(email, password);
+            HluvUI.setCurrentUser(data.user);
+            HluvUI.notify(HLUV_MESSAGES.loginSuccess, 'success');
+            window.location.href = 'profile.html';
+        } catch (error) {
+            HluvUI.handleError(error, HLUV_MESSAGES.loginFailed);
+        } finally {
+            HluvUI.setButtonLoading(submitBtn, false);
+        }
+    });
 
-  const validationMessage = validateLogin(email, password);
-  if (validationMessage) {
-    alert(validationMessage);
-    return;
-  }
+    registerForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitBtn = registerForm.querySelector('button[type="submit"]');
+        const name = document.getElementById('name-register').value.trim();
+        const email = document.getElementById('email-register').value.trim();
+        const gender = document.getElementById('gender-register').value.trim();
+        const birthdate = document.getElementById('birthdate-register').value.trim();
+        const password = document.getElementById('password-register').value.trim();
+        const confirm = document.getElementById('confirm-password-register').value.trim();
 
-  try {
-    const result = await login({ email, password });
-    setCurrentUser(result.user);
-    alert("Đăng nhập thành công.");
-    window.location.href = "index.html";
-  } catch (error) {
-    alert(error.message || "Đăng nhập thất bại.");
-  }
-});
+        if (!HluvUI.validateRequired([name, email, gender, birthdate, password, confirm])) return HluvUI.notify(HLUV_MESSAGES.requiredFields, 'error');
+        if (!HluvUI.isEmail(email)) return HluvUI.notify(HLUV_MESSAGES.invalidEmail, 'error');
+        if (password !== confirm) return HluvUI.notify(HLUV_MESSAGES.passwordMismatch, 'error');
 
-registerForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+        HluvUI.setButtonLoading(submitBtn, true, 'Đang đăng ký...');
+        try {
+            await HluvApi.users.register({
+                name,
+                email,
+                password,
+                gender,
+                birthdate,
+                avatar: `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(email)}`
+            });
+            const loginData = await HluvApi.users.login(email, password);
+            HluvUI.setCurrentUser(loginData.user);
+            HluvUI.notify(HLUV_MESSAGES.registerSuccess, 'success');
+            window.location.href = 'profile.html';
+        } catch (error) {
+            HluvUI.handleError(error, HLUV_MESSAGES.registerFailed);
+        } finally {
+            HluvUI.setButtonLoading(submitBtn, false);
+        }
+    });
 
-  const name = document.getElementById("register-name").value.trim();
-  const email = document.getElementById("register-email").value.trim();
-  const password = document.getElementById("register-password").value.trim();
-  const confirmPassword = document.getElementById("register-confirm-password").value.trim();
-
-  const validationMessage = validateRegister(name, email, password, confirmPassword);
-  if (validationMessage) {
-    alert(validationMessage);
-    return;
-  }
-
-  try {
-    await register({ name, email, password, avatar: "" });
-    alert("Đăng ký thành công. Hãy đăng nhập.");
-    tabLogin.click();
-    registerForm.reset();
-  } catch (error) {
-    alert(error.message || "Đăng ký thất bại.");
-  }
+    if (HluvUI.getCurrentUser()) {
+        window.location.href = 'profile.html';
+    }
 });

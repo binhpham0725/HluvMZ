@@ -1,78 +1,65 @@
-import { getCurrentUser, clearCurrentUser, getTheme, setTheme } from "../utils/storage.js";
+(function () {
+    function currentPage() {
+        return (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    }
 
-export function renderHeader(active = "") {
-  const user = getCurrentUser();
+    function isActive(href) {
+        return href.split('?')[0].toLowerCase() === currentPage();
+    }
 
-  return `
-    <header class="site-header">
-      <div class="site-nav container">
-        <a class="brand" href="index.html">
-          <img src="../assets/images/hluv-logo.png" alt="Logo" class="site-logo">
-          <span>Tạp chí ĐH Hoa Lư</span>
-        </a>
+    function authMarkup() {
+        const user = HluvStorage.getCurrentUser();
+        if (!user) return '<a class="btn btn-primary rounded-pill px-3" href="login.html">Đăng nhập</a>';
+        const avatar = user.avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(user.email || user.name || 'guest')}`;
+        return `
+            <button type="button" class="user-area" id="profile-shortcut" title="Trang cá nhân">
+                <img src="${HluvHelpers.escapeHtml(avatar)}" alt="${HluvHelpers.escapeHtml(user.name || 'Avatar')}" onerror="this.src='${HLUV_CONFIG.defaultAvatar}'">
+                <span class="user-name">${HluvHelpers.escapeHtml(user.name || user.email || 'Người dùng')}</span>
+            </button>
+        `;
+    }
 
-        <button class="menu-toggle" id="menu-toggle">☰</button>
+    function renderHeader() {
+        const header = document.querySelector('.site-header') || document.getElementById('site-header');
+        if (!header || document.body.classList.contains('auth-page')) return;
 
-        <nav class="nav-links" id="nav-links">
-          <a href="index.html" class="${active === "index" ? "active" : ""}">Home</a>
-          <a href="magazine.html" class="${active === "magazine" ? "active" : ""}">Magazine</a>
-          <a href="category.html?id=0" class="${active === "category" ? "active" : ""}">Chuyên mục</a>
-          <a href="search.html" class="${active === "search" ? "active" : ""}">Tìm kiếm</a>
-          <a href="about.html" class="${active === "about" ? "active" : ""}">Giới thiệu</a>
-        </nav>
+        header.className = 'site-header';
+        header.innerHTML = `
+            <nav class="navbar navbar-expand-lg site-navbar">
+                <div class="container">
+                    <a class="navbar-brand brand" href="index.html">
+                        <img class="site-logo" src="${HLUV_CONFIG.logoPath}" alt="Logo ĐH Hoa Lư" onerror="this.style.display='none'">
+                        <span>Tạp chí ĐH Hoa Lư</span>
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Mở menu">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="mainNavbar">
+                        <ul class="navbar-nav mx-lg-auto mb-2 mb-lg-0 nav-links">
+                            ${HLUV_CONFIG.navItems.map((item) => `
+                                <li class="nav-item">
+                                    <a class="nav-link ${isActive(item.href) ? 'active' : ''}" href="${item.href}">${item.label}</a>
+                                </li>
+                            `).join('')}
+                        </ul>
+                        <div class="actions d-flex align-items-center gap-2">
+                            <button class="chip" id="theme-toggle" type="button">Dark Mode</button>
+                            <div class="auth-area">${authMarkup()}</div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        `;
 
-        <div class="actions">
-          <button class="chip" id="theme-toggle">
-            ${getTheme() === "dark" ? "Light Mode" : "Dark Mode"}
-          </button>
+        const shortcut = header.querySelector('#profile-shortcut');
+        if (shortcut) {
+            shortcut.addEventListener('click', () => {
+                window.location.href = 'profile.html';
+            });
+        }
+        HluvHelpers.initThemeToggle();
+    }
 
-          ${
-            user
-              ? `
-            <a href="profile.html" class="user-box">
-              <img src="${user.avatar || `https://i.pravatar.cc/100?u=${encodeURIComponent(user.email)}`}" alt="Avatar">
-              <span>${user.name || user.email}</span>
-            </a>
-            <button class="chip danger" id="logout-btn">Đăng xuất</button>
-          `
-              : `
-            <a href="login.html" class="chip primary-link">Đăng nhập</a>
-          `
-          }
-        </div>
-      </div>
-    </header>
-  `;
-}
-
-export function initHeader() {
-  document.documentElement.setAttribute("data-theme", getTheme());
-
-  const menuToggle = document.getElementById("menu-toggle");
-  const navLinks = document.getElementById("nav-links");
-  const themeToggle = document.getElementById("theme-toggle");
-  const logoutBtn = document.getElementById("logout-btn");
-
-  if (menuToggle && navLinks) {
-    menuToggle.addEventListener("click", () => {
-      navLinks.classList.toggle("open");
-    });
-  }
-
-  if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-      const current = getTheme();
-      const next = current === "dark" ? "light" : "dark";
-      setTheme(next);
-      document.documentElement.setAttribute("data-theme", next);
-      themeToggle.textContent = next === "dark" ? "Light Mode" : "Dark Mode";
-    });
-  }
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      clearCurrentUser();
-      window.location.href = "index.html";
-    });
-  }
-}
+    window.HluvHeader = { render: renderHeader };
+    document.addEventListener('DOMContentLoaded', renderHeader);
+})();

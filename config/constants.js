@@ -1,23 +1,28 @@
-export const API_BASE_URL = "../api";
-
-export const STORAGE_KEYS = {
-  CURRENT_USER: "hluv-current-user",
-  THEME: "hluv-theme",
-};
-
-export const CATEGORY_OPTIONS = [
-  "Công nghệ",
-  "Đời sống",
-  "Học tập",
-  "Giải trí",
-  "Sự kiện",
-];
-
-export const CATEGORY_MAP = {
-  "0": "Tất cả",
-  "1": "Công nghệ",
-  "2": "Đời sống",
-  "3": "Học tập",
-  "4": "Giải trí",
-  "5": "Sự kiện",
-};
+(function () {
+    window.HLUV_CONFIG = {
+        apiBase: '../api',
+        logoPath: '../assets/images/hluv-logo.png',
+        placeholderImage: '../assets/images/placeholder.svg',
+        defaultAvatar: 'https://i.pravatar.cc/120',
+        storageKeys: {
+            currentUser: 'hluv-current-user',
+            theme: 'hluv-theme',
+            readProgress: 'hluv-readprogress'
+        },
+        categories: [
+            { id: '0', name: 'Tất cả' },
+            { id: '1', name: 'Công nghệ' },
+            { id: '2', name: 'Đời sống' },
+            { id: '3', name: 'Học tập' },
+            { id: '4', name: 'Giải trí' },
+            { id: '5', name: 'Sự kiện' }
+        ],
+        navItems: [
+            { href: 'index.html', label: 'Home' },
+            { href: 'magazine.html', label: 'Magazine' },
+            { href: 'category.html?id=0', label: 'Tin tức' },
+            { href: 'about.html', label: 'Giới thiệu' },
+            { href: 'search.html', label: 'Tìm kiếm' }
+        ]
+    };
+})();

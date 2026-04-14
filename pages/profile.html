@@ -1,83 +1,103 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trang cá nhân | Tạp chí ĐH Hoa Lư</title>
-  <link rel="stylesheet" href="../assets/css/main.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trang cá nhân | Tạp chí ĐH Hoa Lư</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css" />
 </head>
 <body>
-  <div id="app-header"></div>
-
-  <main class="container">
-    <section class="panel">
-      <div class="row-between">
-        <div class="profile-top">
-          <img id="profile-avatar" src="../assets/images/placeholder.svg" alt="Avatar">
-          <div>
-            <h2 id="profile-name">Người dùng</h2>
-            <p id="profile-email" style="color:var(--muted);"></p>
-          </div>
+    <header class="site-header" id="site-header"></header>
+    <main class="container">
+        <section class="panel p-4">
+            <div class="user-info">
+                <img id="avatar" src="https://i.pravatar.cc/120" alt="Avatar" />
+                <div>
+                    <p class="story-meta">Hồ sơ cá nhân</p>
+                    <h2 id="fullname">Người dùng</h2>
+                    <p id="email" style="color:var(--muted);"></p>
+                    <p id="profile-extra" class="profile-extra"></p>
+                    <button class="btn edit-profile-btn" id="edit-profile-btn">Chỉnh sửa hồ sơ</button>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="profile-actions">
+                <a class="profile-action" href="profile-bookmarks.html">Bookmark <strong id="bookmark-count">0</strong></a>
+                <a class="profile-action" href="profile-posts.html">Bài đăng <strong id="post-count">0</strong></a>
+                <a class="profile-action" href="profile-reads.html">Đã đọc <strong id="read-count">0</strong></a>
+                <a class="profile-action primary" href="post-editor.html">Đăng bài</a>
+            </div>
+        </section>
+        <section class="footer-section">
+            <h3 style="margin-top:0;">Tài khoản</h3>
+            <p style="color:var(--muted);margin-bottom:1rem;">Bạn đã đăng nhập với email hiển thị trên hồ sơ.</p>
+            <div class="account-actions">
+                <button class="btn secondary" id="security-btn" type="button">Bảo mật tài khoản</button>
+                <button class="btn btn-logout" id="logout-btn" type="button">Đăng xuất</button>
+            </div>
+        </section>
+    </main>
+    <div class="modal" id="edit-profile-modal">
+        <div class="modal-content">
+            <button class="btn-close" type="button" onclick="document.getElementById('edit-profile-modal').classList.remove('active')"></button>
+            <h2>Chỉnh sửa hồ sơ</h2>
+            <form id="edit-profile-form">
+                <label for="edit-name">Tên hiển thị</label>
+                <input id="edit-name" type="text" required />
+                <label for="edit-gender">Giới tính</label>
+                <select id="edit-gender">
+                    <option value="">Chưa chọn</option>
+                    <option value="Nam">Nam</option>
+                    <option value="Nữ">Nữ</option>
+                    <option value="Khác">Khác</option>
+                </select>
+                <label for="edit-birthdate">Ngày sinh</label>
+                <input id="edit-birthdate" type="date" />
+                <label for="edit-avatar">Avatar URL hoặc dữ liệu ảnh</label>
+                <input id="edit-avatar" type="text" placeholder="https://example.com/avatar.jpg" />
+                <label for="edit-avatar-file">Hoặc chọn ảnh từ thiết bị</label>
+                <input id="edit-avatar-file" type="file" accept="image/*" />
+                <img id="edit-avatar-preview" class="image-preview" style="display:none;" alt="Avatar preview" />
+                <p style="font-size:.85rem;color:var(--muted);">Ảnh tải lên sẽ được nén trước khi lưu để tránh lỗi avatar quá lớn.</p>
+                <button type="button" class="btn" onclick="setGravatarAvatar()" style="background:#fb923c;margin-bottom:1rem;">Dùng avatar mặc định</button>
+                <button type="submit" class="btn">Lưu thay đổi</button>
+            </form>
         </div>
-        <button id="edit-profile-button">Chỉnh sửa</button>
-      </div>
-
-      <div class="stat-list">
-        <span class="chip">Bookmark: <strong id="bookmark-count">0</strong></span>
-        <span class="chip">Bài đăng: <strong id="post-count">0</strong></span>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h3>Bài viết đã lưu</h3>
-      <div id="bookmark-list" class="story-grid"></div>
-    </section>
-
-    <section class="panel">
-      <div class="row-between">
-        <h3>Bài viết của bạn</h3>
-      </div>
-      <div id="my-post-list" class="story-grid"></div>
-    </section>
-
-    <section class="panel">
-      <h3>Tạo / sửa bài viết</h3>
-      <form id="post-form">
-        <input type="hidden" id="post-id">
-        <div class="form-group">
-          <label for="post-title">Tiêu đề</label>
-          <input id="post-title" type="text" required>
+    </div>
+    <div class="modal" id="security-modal">
+        <div class="modal-content">
+            <button class="btn-close" id="security-close-btn" type="button"></button>
+            <h2>Bảo mật tài khoản</h2>
+            <p class="security-note">Nhập mật khẩu hiện tại để mở phần thay đổi mật khẩu.</p>
+            <form id="security-verify-form">
+                <label for="security-current-password">Mật khẩu hiện tại</label>
+                <input id="security-current-password" type="password" autocomplete="current-password" required />
+                <button type="submit" class="btn mt-3">Xác minh</button>
+            </form>
+            <form id="change-password-form" hidden>
+                <label for="new-password">Mật khẩu mới</label>
+                <input id="new-password" type="password" autocomplete="new-password" required minlength="6" />
+                <label for="confirm-new-password">Xác nhận mật khẩu mới</label>
+                <input id="confirm-new-password" type="password" autocomplete="new-password" required minlength="6" />
+                <button type="submit" class="btn mt-3">Cập nhật mật khẩu</button>
+            </form>
         </div>
-        <div class="form-group">
-          <label for="post-category">Chuyên mục</label>
-          <select id="post-category" required>
-            <option value="">Chọn chuyên mục</option>
-            <option value="Công nghệ">Công nghệ</option>
-            <option value="Đời sống">Đời sống</option>
-            <option value="Học tập">Học tập</option>
-            <option value="Giải trí">Giải trí</option>
-            <option value="Sự kiện">Sự kiện</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="post-image-url">Link ảnh</label>
-          <input id="post-image-url" type="url" placeholder="https://example.com/image.jpg">
-        </div>
-        <div class="form-group">
-          <label for="post-content">Nội dung</label>
-          <textarea id="post-content" rows="6" required></textarea>
-        </div>
-        <button type="submit" id="post-submit-button">Lưu bài viết</button>
-      </form>
-    </section>
-
-    <section class="panel">
-      <button id="logout-page-button">Đăng xuất</button>
-    </section>
-  </main>
-
-  <div id="app-footer"></div>
-
-  <script type="module" src="../scripts/profile.js"></script>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../config/constants.js"></script>
+    <script src="../config/messages.js"></script>
+    <script src="../utils/storage.js"></script>
+    <script src="../utils/validators.js"></script>
+    <script src="../utils/helpers.js"></script>
+    <script src="../services/api.js"></script>
+    <script src="../services/postService.js"></script>
+    <script src="../services/userService.js"></script>
+    <script src="../services/bookmarkService.js"></script>
+    <script src="../services/authService.js"></script>
+    <script src="../components/articleCard.js"></script>
+    <script src="../components/header.js"></script>
+    <script src="../components/footer.js"></script>
+    <script src="../scripts/profile.js"></script>
 </body>
 </html>
