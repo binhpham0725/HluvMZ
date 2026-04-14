@@ -225,25 +225,27 @@
     function mergeProfileIntoUser(user, profile) {
         if (!user) return null;
         if (!profile) return publicUser(user);
+        const role = isAdminUser(user) || isAdminUser(profile) ? 'admin' : (profile.role || user.role);
         return {
             ...publicUser(user),
             auth_id: profile.id,
             profile_id: profile.id,
             name: profile.name || user.name,
             avatar: profile.avatar_url || user.avatar,
-            role: profile.role || user.role
+            role
         };
     }
 
     async function upsertProfile(authUser, payload = {}) {
         if (!authUser?.id) return fetchProfileByEmail(payload.email);
         const existing = await fetchProfileById(authUser.id);
+        const appUser = await fetchUserByEmail(authUser.email || payload.email).catch(() => null);
         const body = {
             id: authUser.id,
             email: authUser.email || payload.email || existing?.email || '',
             name: payload.name || existing?.name || payload.email || authUser.email || 'Người dùng',
             avatar_url: payload.avatar_url || payload.avatar || existing?.avatar_url || '',
-            role: existing?.role || payload.role || 'reader',
+            role: isAdminUser(appUser) ? 'admin' : (existing?.role || payload.role || 'reader'),
             updated_at: new Date().toISOString()
         };
 
