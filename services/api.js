@@ -164,6 +164,10 @@
 
         const data = await parseJsonResponse(response);
         if (!response.ok) {
+            const authMessage = data?.msg || data?.message || data?.error || '';
+            if (String(authMessage).toLowerCase().includes('email rate limit')) {
+                throw new ApiError('Supabase đang giới hạn gửi email xác nhận. Vào Authentication > Providers > Email và tắt Confirm email trong lúc demo, hoặc cấu hình SMTP riêng rồi thử lại.', response.status, data);
+            }
             throw new ApiError(data?.msg || data?.message || data?.error || `Lỗi Supabase Auth (${response.status}).`, response.status, data);
         }
         return data;
