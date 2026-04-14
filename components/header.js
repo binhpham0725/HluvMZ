@@ -11,9 +11,13 @@
         const user = HluvStorage.getCurrentUser();
         if (!user) return '<a class="btn btn-primary rounded-pill px-3" href="login.html">Đăng nhập</a>';
         const avatar = user.avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(user.email || user.name || 'guest')}`;
+        const isAdmin = HluvHelpers.isAdminUser(user);
         return `
-            <button type="button" class="user-area" id="profile-shortcut" title="Trang cá nhân">
-                <img src="${HluvHelpers.escapeHtml(avatar)}" alt="${HluvHelpers.escapeHtml(user.name || 'Avatar')}" onerror="this.src='${HLUV_CONFIG.defaultAvatar}'">
+            <button type="button" class="user-area ${isAdmin ? 'admin-user' : ''}" id="profile-shortcut" title="Trang cá nhân">
+                <span class="avatar-frame ${isAdmin ? 'admin-avatar' : ''}">
+                    <img src="${HluvHelpers.escapeHtml(avatar)}" alt="${HluvHelpers.escapeHtml(user.name || 'Avatar')}" onerror="this.src='${HLUV_CONFIG.defaultAvatar}'">
+                    ${isAdmin ? '<span class="admin-badge">admin</span>' : ''}
+                </span>
                 <span class="user-name">${HluvHelpers.escapeHtml(user.name || user.email || 'Người dùng')}</span>
             </button>
         `;

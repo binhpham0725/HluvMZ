@@ -47,6 +47,11 @@ input,textarea,[contenteditable="true"]{cursor:text}
 .auth-area{display:flex;align-items:center}
 .user-area{display:flex;align-items:center;gap:.55rem;border:0;border-radius:999px;background:rgba(29,78,216,.08);color:var(--text);padding:.25rem .6rem;cursor:pointer;max-width:220px}
 .user-area img{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)}
+.user-area.admin-user{background:rgba(250,204,21,.13);box-shadow:0 0 0 1px rgba(250,204,21,.22) inset}
+.avatar-frame,.profile-avatar-wrap,.comment-avatar-wrap{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:.16rem;flex:0 0 auto}
+.admin-avatar img{border-color:#facc15!important;box-shadow:0 0 0 4px rgba(250,204,21,.18),0 0 22px rgba(250,204,21,.72),0 0 38px rgba(249,115,22,.35);animation:adminHalo 2.2s ease-in-out infinite}
+.admin-badge{font-size:.66rem;line-height:1;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:#facc15;text-shadow:0 0 6px rgba(250,204,21,.95),0 0 14px rgba(249,115,22,.65);animation:adminSparkle 1.65s ease-in-out infinite}
+.user-area .admin-badge{font-size:.55rem;margin-top:-.02rem}
 .user-name{font-size:.9rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .sticky-progress{position:fixed;top:0;left:0;width:100%;height:4px;background:var(--accent);z-index:1040;transform:scaleX(0);transform-origin:left}
@@ -88,6 +93,7 @@ input,textarea,[contenteditable="true"]{cursor:text}
 .container > .panel,.panel + .panel,.footer-section{margin-top:1rem}
 .user-info{display:flex;gap:1rem;align-items:center}
 .user-info img{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)}
+.profile-avatar-wrap .admin-badge{margin-top:.25rem}
 .profile-extra{color:var(--muted);font-weight:750;margin:.25rem 0 .75rem}
 .divider{height:1px;background:var(--line);margin:1rem 0}
 .profile-tabs{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:1rem}
@@ -130,11 +136,13 @@ form textarea{min-height:150px;resize:vertical}
 .comment-list{display:grid;gap:.8rem;margin-top:1rem}
 .comment-item{display:flex;gap:.75rem;border:1px solid var(--line);background:rgba(29,78,216,.04);border-radius:16px;padding:.85rem}
 .comment-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid rgba(29,78,216,.25);flex:0 0 auto;background:#e2e8f0}
+.comment-avatar-wrap .admin-badge{font-size:.52rem;margin-top:.1rem}
 .comment-body{min-width:0;flex:1}
 .comment-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.25rem}
 .comment-head strong{font-weight:900}
 .comment-head small{color:var(--muted)}
 .comment-body p{margin:0;line-height:1.6;color:var(--text);white-space:pre-wrap}
+.comment-tools{display:flex;justify-content:flex-end;margin-top:.65rem}
 .related{margin-top:2rem}
 .related-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
 .cardsmall{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer}
@@ -181,6 +189,17 @@ form textarea{min-height:150px;resize:vertical}
 .app-toast{position:fixed;right:1rem;bottom:1rem;z-index:3000;max-width:min(360px,calc(100vw - 2rem));padding:.8rem 1rem;border-radius:14px;background:#0f172a;color:#fff;box-shadow:0 18px 40px rgba(15,23,42,.25);opacity:0;pointer-events:none;transform:translateY(12px);transition:.2s}
 .app-toast:not(:empty){opacity:1;transform:translateY(0)}
 .app-toast-error{background:#b91c1c}.app-toast-success{background:#15803d}
+
+@keyframes adminHalo{
+    0%,100%{box-shadow:0 0 0 4px rgba(250,204,21,.16),0 0 18px rgba(250,204,21,.55),0 0 32px rgba(249,115,22,.28)}
+    50%{box-shadow:0 0 0 7px rgba(250,204,21,.24),0 0 30px rgba(250,204,21,.9),0 0 54px rgba(249,115,22,.45)}
+}
+
+@keyframes adminSparkle{
+    0%,100%{filter:brightness(1);opacity:.86;transform:translateY(0)}
+    45%{filter:brightness(1.55);opacity:1;transform:translateY(-1px)}
+    70%{filter:brightness(1.2);opacity:.96;transform:translateY(0)}
+}
 
 @media(max-width:991.98px){
     .hero{grid-template-columns:1fr}

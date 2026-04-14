@@ -7,11 +7,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const list = document.getElementById('my-posts');
+    const isAdmin = HluvUI.isAdminUser(user);
+    const title = document.querySelector('h1');
+    if (isAdmin && title) title.textContent = 'Quản lý tất cả bài viết';
 
     function createPostCard(post) {
         const card = HluvUI.renderPostCard(post, { compact: true });
         const actions = document.createElement('div');
         actions.className = 'card-actions';
+        const isOwner = Number(post.user_id) === Number(user.id);
 
         const editBtn = document.createElement('a');
         editBtn.className = 'btn btn-small btn-edit';
@@ -26,16 +30,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         deleteBtn.addEventListener('click', async (event) => {
             event.stopPropagation();
             if (!confirm(HLUV_MESSAGES.confirmDeletePost)) return;
+            HluvUI.setButtonLoading(deleteBtn, true, 'Đang xóa...');
             try {
-                await HluvPostService.delete(post.id, user.id);
+                const result = await HluvPostService.delete(post.id, user.id);
+                if (!result.deleted) throw new Error('Không có bài viết nào được xóa.');
                 HluvUI.notify(HLUV_MESSAGES.deletePostSuccess, 'success');
                 loadPosts();
             } catch (error) {
                 HluvUI.handleError(error, 'Không xóa được bài viết.');
+            } finally {
+                HluvUI.setButtonLoading(deleteBtn, false);
             }
         });
 
-        actions.append(editBtn, deleteBtn);
+        if (isOwner) actions.appendChild(editBtn);
+        if (isAdmin || isOwner) actions.appendChild(deleteBtn);
         card.querySelector('.story-body').appendChild(actions);
         return card;
     }
@@ -43,10 +52,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadPosts() {
         HluvUI.renderState(list, 'Đang tải bài viết...');
         try {
-            const posts = await HluvPostService.list({ user_id: user.id });
+            const posts = await HluvPostService.list(isAdmin ? {} : { user_id: user.id });
             list.innerHTML = '';
             if (!posts.length) {
-                HluvUI.renderState(list, 'Bạn chưa có bài đăng nào. Bấm “Đăng bài” để tạo bài mới.');
+                HluvUI.renderState(list, isAdmin ? 'Chưa có bài viết nào để quản lý.' : 'Bạn chưa có bài đăng nào. Bấm “Đăng bài” để tạo bài mới.');
                 return;
             }
             posts.forEach((post) => list.appendChild(createPostCard(post)));

@@ -59,6 +59,13 @@
         notify(error?.message || fallbackMessage || HLUV_MESSAGES.networkError, 'error');
     }
 
+    function isAdminUser(user) {
+        return Boolean(user && (
+            String(user.role || '').toLowerCase() === 'admin'
+            || String(user.email || '').toLowerCase() === 'admin@webtapchi.local'
+        ));
+    }
+
     function applyTheme(theme) {
         const next = theme || localStorage.getItem(HLUV_CONFIG.storageKeys.theme) || 'light';
         document.documentElement.setAttribute('data-theme', next);
@@ -126,6 +133,7 @@
         setButtonLoading,
         notify,
         handleError,
+        isAdminUser,
         applyTheme,
         initThemeToggle,
         initBackTop,
@@ -144,6 +152,7 @@
         setButtonLoading,
         notify,
         handleError,
+        isAdminUser,
         validateRequired: (values) => HluvValidators.required(values),
         isEmail: (value) => HluvValidators.email(value),
         isAccountName: (value) => HluvValidators.accountName(value),

@@ -10,7 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         fullname: document.getElementById('fullname'),
         email: document.getElementById('email'),
         profileExtra: document.getElementById('profile-extra'),
+        avatarWrap: document.getElementById('profile-avatar-wrap'),
         avatar: document.getElementById('avatar'),
+        adminBadge: document.getElementById('profile-admin-badge'),
         bookmarkCount: document.getElementById('bookmark-count'),
         postCount: document.getElementById('post-count'),
         readCount: document.getElementById('read-count'),
@@ -51,9 +53,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         els.avatar.onerror = () => {
             els.avatar.src = `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(user.email || user.name || 'guest')}`;
         };
+        const isAdmin = HluvUI.isAdminUser(user);
+        els.avatarWrap?.classList.toggle('admin-avatar', isAdmin);
+        if (els.adminBadge) els.adminBadge.hidden = !isAdmin;
 
+        const headerArea = document.querySelector('.user-area');
+        const headerAvatarFrame = document.querySelector('.user-area .avatar-frame');
         const headerAvatar = document.querySelector('.user-area img');
         const headerName = document.querySelector('.user-name');
+        headerArea?.classList.toggle('admin-user', isAdmin);
+        headerAvatarFrame?.classList.toggle('admin-avatar', isAdmin);
         if (headerAvatar) headerAvatar.src = els.avatar.src;
         if (headerName) headerName.textContent = user.name || user.email || 'Người dùng';
     }

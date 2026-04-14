@@ -25,6 +25,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let article = null;
 
+    function canManagePost(post) {
+        return Boolean(currentUser && post && (
+            HluvUI.isAdminUser(currentUser) || Number(currentUser.id) === Number(post.user_id)
+        ));
+    }
+
+    function canManageComment(comment) {
+        return Boolean(currentUser && comment && (
+            HluvUI.isAdminUser(currentUser) || Number(currentUser.id) === Number(comment.user_id)
+        ));
+    }
+
+    async function deleteArticle() {
+        if (!article || !canManagePost(article)) return;
+        if (!confirm(HLUV_MESSAGES.confirmDeletePost)) return;
+
+        const deleteBtn = document.getElementById('delete-post-btn');
+        HluvUI.setButtonLoading(deleteBtn, true, 'Đang xóa...');
+        try {
+            const result = await HluvPostService.delete(postId, currentUser.id);
+            if (!result.deleted) throw new Error('Không có bài viết nào được xóa.');
+            HluvUI.notify(HLUV_MESSAGES.deletePostSuccess, 'success');
+            window.location.href = 'magazine.html';
+        } catch (error) {
+            HluvUI.handleError(error, 'Không xóa được bài viết.');
+        } finally {
+            HluvUI.setButtonLoading(deleteBtn, false);
+        }
+    }
+
+    function syncArticleActions(post) {
+        const existing = document.getElementById('delete-post-btn');
+        if (!canManagePost(post)) {
+            existing?.remove();
+            return;
+        }
+        if (existing) return;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.id = 'delete-post-btn';
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-delete';
+        deleteBtn.textContent = 'Xóa bài';
+        deleteBtn.addEventListener('click', deleteArticle);
+        els.shareBtn?.insertAdjacentElement('afterend', deleteBtn);
+    }
+
     function renderArticle(post) {
         const words = String(post.content || '').trim().split(/\s+/).filter(Boolean).length;
         const readMinutes = Math.max(1, Math.ceil(words / 220));
@@ -35,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         els.readtime.textContent = `${readMinutes} phút đọc`;
         els.image.src = post.image_url || HLUV_CONFIG.placeholderImage;
         els.image.alt = post.title || '';
+        syncArticleActions(post);
 
         const paragraphs = String(post.content || '')
             .split(/\n+/)
@@ -98,8 +146,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const item = document.createElement('div');
                 item.className = 'comment-item';
                 const avatar = comment.author_avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(comment.author_name || comment.user_id || 'guest')}`;
+                const isCommentAdmin = String(comment.author_role || '').toLowerCase() === 'admin';
                 item.innerHTML = `
-                    <img class="comment-avatar" src="${HluvUI.escapeHtml(avatar)}" alt="">
+                    <span class="comment-avatar-wrap ${isCommentAdmin ? 'admin-avatar' : ''}">
+                        <img class="comment-avatar" src="${HluvUI.escapeHtml(avatar)}" alt="">
+                        ${isCommentAdmin ? '<span class="admin-badge">admin</span>' : ''}
+                    </span>
                     <div class="comment-body">
                         <div class="comment-head">
                             <strong>${HluvUI.escapeHtml(comment.author_name || 'Người dùng')}</strong>
@@ -108,6 +160,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p>${HluvUI.escapeHtml(comment.content || '')}</p>
                     </div>
                 `;
+                if (canManageComment(comment)) {
+                    const tools = document.createElement('div');
+                    tools.className = 'comment-tools';
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.type = 'button';
+                    deleteBtn.className = 'btn btn-small btn-delete';
+                    deleteBtn.textContent = 'Xóa bình luận';
+                    deleteBtn.addEventListener('click', async () => {
+                        if (!confirm(HLUV_MESSAGES.confirmDeleteComment)) return;
+                        HluvUI.setButtonLoading(deleteBtn, true, 'Đang xóa...');
+                        try {
+                            const result = await HluvApi.comments.delete(comment.id, currentUser.id);
+                            if (!result.deleted) throw new Error('Không có bình luận nào được xóa.');
+                            HluvUI.notify(HLUV_MESSAGES.deleteCommentSuccess, 'success');
+                            await renderComments();
+                        } catch (error) {
+                            HluvUI.handleError(error, 'Không xóa được bình luận.');
+                        } finally {
+                            HluvUI.setButtonLoading(deleteBtn, false);
+                        }
+                    });
+                    tools.appendChild(deleteBtn);
+                    item.querySelector('.comment-body').appendChild(tools);
+                }
                 els.commentList.appendChild(item);
             });
         } catch (error) {

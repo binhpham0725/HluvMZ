@@ -79,6 +79,12 @@ SET password='$2y$10$B/HeVoSTizggEw0aKiQI8O9g68ACREDkQO7Bue4A7DGVH61tS3mxC',
     updated_at=NOW()
 WHERE email='admin@hluv.local';
 
+-- Tai khoan admin theo yeu cau co quyen xoa moi bai viet va binh luan.
+UPDATE users
+SET role='admin',
+    updated_at=NOW()
+WHERE email='admin@webtapchi.local';
+
 INSERT IGNORE INTO posts (id,user_id,title,category,content,excerpt,image_url,status,created_at) VALUES
 (1,1,'AI và giáo dục Đại học Hoa Lư 2026','Công nghệ','AI đang thay đổi cách sinh viên tìm tài liệu, luyện kỹ năng và nhận phản hồi trong quá trình học. Khi được dùng đúng cách, công nghệ này giúp cá nhân hóa lộ trình học tập và hỗ trợ giảng viên theo dõi tiến độ tốt hơn.','Nghiên cứu và ứng dụng AI cho sinh viên Đại học Hoa Lư.','https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80','published','2026-03-30 08:30:00'),
 (2,1,'Kỹ năng mềm cần có để thành công','Đời sống','Bên cạnh kiến thức chuyên môn, sinh viên cần rèn luyện giao tiếp, quản lý thời gian, tư duy phản biện và khả năng làm việc nhóm. Đây là những kỹ năng giúp bạn tự tin hơn trong học tập, thực tập và công việc sau khi ra trường.','Gợi ý các kỹ năng mềm quan trọng cho sinh viên.','https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1200&q=80','published','2026-03-28 09:00:00'),

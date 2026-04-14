@@ -23,9 +23,11 @@
         passwordChangeFailed: 'Không đổi được mật khẩu.',
         commentCreateSuccess: 'Đã gửi bình luận.',
         commentCreateFailed: 'Không gửi được bình luận.',
+        deleteCommentSuccess: 'Đã xóa bình luận.',
         bookmarkAdded: 'Đã lưu bài viết.',
         bookmarkRemoved: 'Đã bỏ lưu bài viết.',
         confirmDeletePost: 'Bạn chắc chắn muốn xóa bài viết này?',
+        confirmDeleteComment: 'Bạn chắc chắn muốn xóa bình luận này?',
         confirmLogout: 'Bạn chắc chắn muốn đăng xuất không?'
     };
 })();

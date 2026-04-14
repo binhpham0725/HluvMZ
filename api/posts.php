@@ -11,6 +11,17 @@ function excerptFromContent(string $content): string {
     return substr(strip_tags($content), 0, 210);
 }
 
+function isAdminUser(mysqli $mysqli, int $userId): bool {
+    $stmt = $mysqli->prepare('SELECT email,role FROM users WHERE id=? LIMIT 1');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows !== 1) return false;
+
+    $user = $res->fetch_assoc();
+    return ($user['role'] ?? '') === 'admin' || strtolower($user['email'] ?? '') === 'admin@webtapchi.local';
+}
+
 if ($action === 'list' && $method === 'GET') {
     $q = trim($_GET['q'] ?? '');
     $cat = trim($_GET['category'] ?? '');
@@ -117,8 +128,13 @@ if ($action === 'delete' && $method === 'DELETE') {
     $userId = intval($_GET['user_id'] ?? 0);
     if (!$id || !$userId) jsonResult(['error' => 'id/user_id required'], 400);
 
-    $stmt = $mysqli->prepare('DELETE FROM posts WHERE id=? AND user_id=?');
-    $stmt->bind_param('ii', $id, $userId);
+    if (isAdminUser($mysqli, $userId)) {
+        $stmt = $mysqli->prepare('DELETE FROM posts WHERE id=?');
+        $stmt->bind_param('i', $id);
+    } else {
+        $stmt = $mysqli->prepare('DELETE FROM posts WHERE id=? AND user_id=?');
+        $stmt->bind_param('ii', $id, $userId);
+    }
     $stmt->execute();
     jsonResult(['success' => true, 'deleted' => $stmt->affected_rows]);
 }
