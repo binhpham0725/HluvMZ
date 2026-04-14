@@ -11,6 +11,7 @@
         defaultAvatar: 'https://i.pravatar.cc/120',
         storageKeys: {
             currentUser: 'hluv-current-user',
+            supabaseSession: 'hluv-supabase-session',
             theme: 'hluv-theme',
             readProgress: 'hluv-readprogress'
         },

@@ -6,7 +6,8 @@
         setCurrentUser(user) {
             HluvStorage.setCurrentUser(user);
         },
-        logout() {
+        async logout() {
+            await HluvApi.auth?.signOut?.();
             HluvStorage.clearCurrentUser();
             window.location.href = 'login.html';
         },

@@ -79,6 +79,27 @@
         };
     }
 
+    function authSessionKey() {
+        return HLUV_CONFIG.storageKeys.supabaseSession || 'hluv-supabase-session';
+    }
+
+    function setAuthSession(session) {
+        if (!session?.access_token) return;
+        localStorage.setItem(authSessionKey(), JSON.stringify(session));
+    }
+
+    function getAuthSession() {
+        try {
+            return JSON.parse(localStorage.getItem(authSessionKey()) || 'null');
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function clearAuthSession() {
+        localStorage.removeItem(authSessionKey());
+    }
+
     async function parseJsonResponse(response) {
         const text = await response.text();
         if (!text) return null;
@@ -177,6 +198,98 @@
             }
         });
         return rows?.[0] || null;
+    }
+
+    async function fetchProfileById(id) {
+        if (!id) return null;
+        const rows = await supabaseRest('profiles', {
+            params: { select: '*', id: `eq.${id}`, limit: 1 }
+        });
+        return rows?.[0] || null;
+    }
+
+    async function fetchProfileByEmail(email) {
+        if (!email) return null;
+        const rows = await supabaseRest('profiles', {
+            params: { select: '*', email: `eq.${email}`, limit: 1 }
+        });
+        return rows?.[0] || null;
+    }
+
+    function mergeProfileIntoUser(user, profile) {
+        if (!user) return null;
+        if (!profile) return publicUser(user);
+        return {
+            ...publicUser(user),
+            auth_id: profile.id,
+            profile_id: profile.id,
+            name: profile.name || user.name,
+            avatar: profile.avatar_url || user.avatar,
+            role: profile.role || user.role
+        };
+    }
+
+    async function upsertProfile(authUser, payload = {}) {
+        if (!authUser?.id) return fetchProfileByEmail(payload.email);
+        const existing = await fetchProfileById(authUser.id);
+        const body = {
+            id: authUser.id,
+            email: authUser.email || payload.email || existing?.email || '',
+            name: payload.name || existing?.name || payload.email || authUser.email || 'Người dùng',
+            avatar_url: payload.avatar_url || payload.avatar || existing?.avatar_url || '',
+            role: existing?.role || payload.role || 'reader',
+            updated_at: new Date().toISOString()
+        };
+
+        const rows = await supabaseRest('profiles', {
+            method: 'POST',
+            params: { on_conflict: 'id' },
+            body,
+            prefer: 'resolution=merge-duplicates,return=representation'
+        });
+        return rows?.[0] || body;
+    }
+
+    async function ensureAppUserFromProfile(profile, payload = {}) {
+        const email = profile?.email || payload.email;
+        if (!email) throw new ApiError('Email profile không hợp lệ.', 400);
+
+        const existing = await fetchUserByEmail(email);
+        if (existing) return mergeProfileIntoUser(existing, profile);
+
+        const rows = await supabaseRest('users', {
+            method: 'POST',
+            body: {
+                name: profile?.name || payload.name || email,
+                email,
+                password: 'supabase-auth',
+                avatar: profile?.avatar_url || payload.avatar || '',
+                gender: payload.gender || null,
+                birthdate: payload.birthdate || null,
+                role: profile?.role || 'reader',
+                xp: 0,
+                rank: 'Bần Nông',
+                rank_manual: false
+            },
+            prefer: 'return=representation'
+        });
+        return mergeProfileIntoUser(rows?.[0], profile);
+    }
+
+    async function syncProfileFromAppUser(user, payload = {}) {
+        const profile = (user?.auth_id && await fetchProfileById(user.auth_id)) || await fetchProfileByEmail(user?.email);
+        if (!profile) return;
+        await supabaseRest('profiles', {
+            method: 'PATCH',
+            params: { id: `eq.${profile.id}` },
+            body: {
+                name: payload.name || user.name || profile.name,
+                avatar_url: payload.avatar || user.avatar || profile.avatar_url,
+                role: user.role || profile.role || 'reader',
+                updated_at: new Date().toISOString()
+            },
+            prefer: 'return=minimal'
+        });
     }
 
     function hydratePost(post, usersById) {
@@ -324,23 +437,21 @@
         const rawPassword = String(password || '').trim();
         if (!normalizedEmail || !rawPassword) throw new ApiError('Email, password required', 400);
 
+        let auth;
         try {
-            const auth = await supabaseAuth('token?grant_type=password', {
+            auth = await supabaseAuth('token?grant_type=password', {
                 email: normalizedEmail,
                 password: rawPassword
             });
-            const user = await fetchUserByEmail(normalizedEmail);
-            if (!user) throw new ApiError('Tài khoản Supabase Auth đã có nhưng chưa có hồ sơ users.', 404, auth);
-            return { success: true, user: publicUser(user) };
         } catch (authError) {
-            const legacyUser = await fetchUserByEmail(normalizedEmail, true);
-            if (!legacyUser) throw new ApiError('Tài khoản không tồn tại', 404, authError);
-            if (legacyUser.password === rawPassword) return { success: true, user: publicUser(legacyUser) };
-            if (String(legacyUser.password || '').startsWith('$2y$')) {
-                throw new ApiError('Tài khoản này đang dùng mật khẩu hash PHP. Hãy tạo tài khoản trong Supabase Auth hoặc thêm RPC verify password.', 401, authError);
-            }
-            throw new ApiError('Mật khẩu sai', 401, authError);
+            clearAuthSession();
+            throw new ApiError('Đăng nhập Supabase Auth thất bại. Tài khoản cũ PHP cần tạo lại trên Supabase Auth.', authError.status || 401, authError);
         }
+
+        setAuthSession(auth);
+        const profile = await upsertProfile(auth.user, { email: normalizedEmail });
+        const user = await ensureAppUserFromProfile(profile, { email: normalizedEmail });
+        return { success: true, user };
     }
 
     async function registerUser(payload) {
@@ -349,30 +460,29 @@
         const password = String(payload.password || '').trim();
         if (!name || !email || !password) throw new ApiError('Yêu cầu name/email/password', 400);
 
-        await supabaseAuth('signup', { email, password }).catch((error) => {
-            if (!String(error.message || '').toLowerCase().includes('already')) throw error;
-        });
-
-        const existing = await fetchUserByEmail(email);
-        if (existing) return { success: true, id: existing.id };
-
-        const rows = await supabaseRest('users', {
-            method: 'POST',
-            body: {
+        const auth = await supabaseAuth('signup', {
+            email,
+            password,
+            data: {
                 name,
-                email,
-                password: 'supabase-auth',
-                avatar: payload.avatar || '',
-                gender: payload.gender || null,
-                birthdate: payload.birthdate || null,
-                role: 'reader',
-                xp: 0,
-                rank: 'Bần Nông',
-                rank_manual: false
-            },
-            prefer: 'return=representation'
+                avatar_url: payload.avatar || ''
+            }
+        }).catch((error) => {
+            if (!String(error.message || '').toLowerCase().includes('already')) throw error;
+            return null;
         });
-        return { success: true, id: rows?.[0]?.id };
+
+        if (auth?.access_token) setAuthSession(auth);
+        const authUser = auth?.user || { id: null, email };
+        const profile = await upsertProfile(authUser, {
+            name,
+            email,
+            avatar: payload.avatar || '',
+            gender: payload.gender || null,
+            birthdate: payload.birthdate || null
+        });
+        const user = await ensureAppUserFromProfile(profile, payload);
+        return { success: true, id: user?.id, user };
     }
 
     async function updateUser(payload) {
@@ -391,21 +501,17 @@
             },
             prefer: 'return=representation'
         });
-        return { success: true, affected_rows: rows?.length || 0, user: publicUser(rows?.[0]) };
+        const user = publicUser(rows?.[0]);
+        await syncProfileFromAppUser(user, payload).catch((error) => console.warn('Không đồng bộ được profiles.', error));
+        const profile = await fetchProfileByEmail(user?.email).catch(() => null);
+        return { success: true, affected_rows: rows?.length || 0, user: mergeProfileIntoUser(user, profile) };
     }
 
     async function verifyPassword(id, password) {
         const user = await fetchUserById(id, true);
         if (!user) throw new ApiError('User not found', 404);
-        if (user.password === password) return { success: true };
-        if (user.password === 'supabase-auth') {
-            await supabaseAuth('token?grant_type=password', { email: user.email, password });
-            return { success: true };
-        }
-        if (String(user.password || '').startsWith('$2y$')) {
-            throw new ApiError('Mật khẩu hash PHP cần RPC/server để xác minh trên Supabase.', 401);
-        }
-        throw new ApiError('Mật khẩu hiện tại không đúng', 401);
+        await supabaseAuth('token?grant_type=password', { email: user.email, password });
+        return { success: true };
     }
 
     async function changePassword(id, currentPassword, newPassword) {
@@ -413,30 +519,20 @@
         if (!user) throw new ApiError('User not found', 404);
         if (String(newPassword || '').length < 6) throw new ApiError('Mật khẩu mới tối thiểu 6 ký tự', 400);
 
-        if (user.password === 'supabase-auth') {
-            const auth = await supabaseAuth('token?grant_type=password', { email: user.email, password: currentPassword });
-            let response = await fetch(`${supabaseConfig().url}/auth/v1/user`, {
-                method: 'PUT',
-                headers: {
-                    apikey: supabaseConfig().key,
-                    Authorization: `Bearer ${auth.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ password: newPassword })
-            });
-            const data = await parseJsonResponse(response);
-            if (!response.ok) throw new ApiError(data?.message || 'Không đổi được mật khẩu Supabase Auth.', response.status, data);
-            return { success: true };
-        }
-
-        await verifyPassword(id, currentPassword);
-        const rows = await supabaseRest('users', {
-            method: 'PATCH',
-            params: { id: `eq.${Number(id)}` },
-            body: { password: newPassword, updated_at: new Date().toISOString() },
-            prefer: 'return=representation'
+        const auth = await supabaseAuth('token?grant_type=password', { email: user.email, password: currentPassword });
+        setAuthSession(auth);
+        const response = await fetch(`${supabaseConfig().url}/auth/v1/user`, {
+            method: 'PUT',
+            headers: {
+                apikey: supabaseConfig().key,
+                Authorization: `Bearer ${auth.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: newPassword })
         });
-        return { success: true, affected_rows: rows?.length || 0 };
+        const data = await parseJsonResponse(response);
+        if (!response.ok) throw new ApiError(data?.message || 'Không đổi được mật khẩu Supabase Auth.', response.status, data);
+        return { success: true };
     }
 
     async function userStats(userId) {
@@ -624,6 +720,22 @@
         throw new ApiError('Action not found', 404, { endpoint, action });
     }
 
+    async function signOut() {
+        const session = getAuthSession();
+        if (session?.access_token) {
+            await fetch(`${supabaseConfig().url}/auth/v1/logout`, {
+                method: 'POST',
+                headers: {
+                    apikey: supabaseConfig().key,
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).catch((error) => console.warn('Không gọi được Supabase signOut.', error));
+        }
+        clearAuthSession();
+        return { success: true };
+    }
+
     async function parseResponse(response) {
         const text = await response.text();
         if (!text) return null;
@@ -666,6 +778,9 @@
     window.HluvApi = {
         ApiError,
         request,
+        auth: {
+            signOut
+        },
         likes: {
             count(postId) {
                 return request('likes.php', { action: 'count', post_id: postId });

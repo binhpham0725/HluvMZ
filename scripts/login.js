@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         HluvUI.setButtonLoading(submitBtn, true, 'Đang đăng ký...');
         try {
-            await HluvApi.users.register({
+            const registerData = await HluvApi.users.register({
                 name,
                 email,
                 password,
@@ -75,9 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 birthdate,
                 avatar: `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(email)}`
             });
-            const loginData = await HluvApi.users.login(email, password);
-            HluvUI.setCurrentUser(loginData.user);
-            recordActivityDay(loginData.user.id);
+            HluvUI.setCurrentUser(registerData.user);
+            recordActivityDay(registerData.user.id);
             HluvUI.notify(HLUV_MESSAGES.registerSuccess, 'success');
             window.location.href = 'profile.html';
         } catch (error) {

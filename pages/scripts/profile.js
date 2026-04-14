@@ -336,10 +336,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     els.securityVerifyForm.addEventListener('submit', verifyCurrentPassword);
     els.changePasswordForm.addEventListener('submit', changePassword);
-    els.logoutBtn.addEventListener('click', () => {
+    els.logoutBtn.addEventListener('click', async () => {
         if (!confirm(HLUV_MESSAGES.confirmLogout)) return;
-        HluvUI.clearCurrentUser();
-        window.location.href = 'login.html';
+        await HluvAuthService.logout();
     });
 
     window.setGravatarAvatar = function setGravatarAvatar() {
