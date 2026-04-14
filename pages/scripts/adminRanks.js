@@ -2,6 +2,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const admin = HluvUI.getCurrentUser();
     const list = document.getElementById('rank-admin-list');
     const rankOptions = ['auto', 'Vô Gia Cư', 'Bần Nông', 'Thường Dân', 'Học Sĩ', 'Quý Tộc', 'Vương Giả'];
+    const rankHints = {
+        'Vô Gia Cư': 'ngoài hệ thống',
+        'Bần Nông': 'Level 1 · <20 XP',
+        'Thường Dân': 'Level 2 · 20+ XP',
+        'Học Sĩ': 'Level 3 · 50+ XP',
+        'Quý Tộc': 'Level 4 · 100+ XP',
+        'Vương Giả': 'Level 5 · 200+ XP'
+    };
 
     if (!admin || !HluvUI.isAdminUser(admin)) {
         HluvUI.notify('Chỉ admin mới được vào trang quản lý cấp bậc.', 'error');
@@ -12,7 +20,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function optionLabel(rank) {
         if (rank === 'auto') return 'Tự động theo XP';
         const info = HluvUI.ranks[rank] || { icon: '', label: rank };
-        return `${info.icon} ${info.label}`;
+        const hint = rankHints[rank] ? ` · ${rankHints[rank]}` : '';
+        return `${info.icon} ${info.label}${hint}`;
     }
 
     function renderUserRow(user) {
