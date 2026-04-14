@@ -1,8 +1,8 @@
 (function () {
     window.HLUV_CONFIG = {
-        apiBase: '/api',
-        logoPath: '/assets/images/hluv-logo.png',
-        placeholderImage: '/assets/images/placeholder.svg',
+        apiBase: '../api',
+        logoPath: '../assets/images/hluv-logo.png',
+        placeholderImage: '../assets/images/placeholder.svg',
         defaultAvatar: 'https://i.pravatar.cc/120',
         storageKeys: {
             currentUser: 'hluv-current-user',
