@@ -1,6 +1,11 @@
 (function () {
     window.HLUV_CONFIG = {
         apiBase: '../api',
+        supabase: {
+            enabled: true,
+            url: 'https://lckywgiojchnhleyuamg.supabase.co',
+            key: 'sb_publishable_lpGw24iiZGWPqeNma9Fxdg_xkFph1Qo'
+        },
         logoPath: '../assets/images/hluv-logo.png',
         placeholderImage: '../assets/images/placeholder.svg',
         defaultAvatar: 'https://i.pravatar.cc/120',
