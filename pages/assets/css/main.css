@@ -135,7 +135,7 @@ body:not(.auth-page) > main,body:not(.auth-page) > .hero,body:not(.auth-page) > 
 .rank-admin-copy strong{font-weight:950}
 .rank-admin-copy small,.rank-admin-meta{color:var(--muted);font-weight:750}
 .rank-admin-meta{display:grid;gap:.25rem;font-size:.88rem}
-.rank-admin-form{display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
+.rank-admin-form{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:.5rem;align-items:center}
 .rank-admin-form select{margin:0}
 .card-actions{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.75rem}
 .btn-small{font-size:.85rem;padding:.42rem .7rem}

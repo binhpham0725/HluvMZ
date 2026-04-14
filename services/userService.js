@@ -21,6 +21,9 @@
         updateRank(adminId, userId, rank) {
             return HluvApi.request('users.php', { action: 'update_rank' }, { method: 'POST', body: { admin_id: adminId, user_id: userId, rank } });
         },
+        remove(adminId, userId) {
+            return HluvApi.request('users.php', { action: 'delete', admin_id: adminId, user_id: userId }, { method: 'DELETE' });
+        },
         rankCatalog() {
             return HluvApi.request('users.php', { action: 'rank-catalog' });
         },

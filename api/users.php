@@ -262,6 +262,62 @@ if ($action === 'update_rank' && ($method === 'POST' || $method === 'PUT')) {
     jsonResult(['success' => true, 'user' => publicUser($mysqli, $userId)]);
 }
 
+if ($action === 'delete' && $method === 'DELETE') {
+    $adminId = intval($_GET['admin_id'] ?? 0);
+    $userId = intval($_GET['user_id'] ?? 0);
+    if (!$adminId || !$userId) jsonResult(['error' => 'admin_id/user_id required'], 400);
+    if (!isAdminUser($mysqli, $adminId)) jsonResult(['error' => 'Admin required'], 403);
+    if ($adminId === $userId) jsonResult(['error' => 'Không thể tự xóa tài khoản đang đăng nhập'], 400);
+
+    $target = publicUser($mysqli, $userId);
+    if (!$target) jsonResult(['error' => 'User not found'], 404);
+    if (($target['role'] ?? '') === 'admin' || strtolower($target['email'] ?? '') === 'admin@webtapchi.local') {
+        jsonResult(['error' => 'Không thể xóa tài khoản admin'], 400);
+    }
+
+    $mysqli->begin_transaction();
+    try {
+        $stmt = $mysqli->prepare('DELETE c FROM comments c JOIN posts p ON p.id=c.post_id WHERE p.user_id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+
+        $stmt = $mysqli->prepare('DELETE l FROM likes l JOIN posts p ON p.id=l.post_id WHERE p.user_id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+
+        $stmt = $mysqli->prepare('DELETE b FROM bookmarks b JOIN posts p ON p.id=b.post_id WHERE p.user_id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+
+        $stmt = $mysqli->prepare('DELETE FROM comments WHERE user_id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+
+        $stmt = $mysqli->prepare('DELETE FROM likes WHERE user_id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+
+        $stmt = $mysqli->prepare('DELETE FROM bookmarks WHERE user_id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+
+        $stmt = $mysqli->prepare('DELETE FROM posts WHERE user_id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+
+        $stmt = $mysqli->prepare('DELETE FROM users WHERE id=?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $deleted = $stmt->affected_rows;
+
+        $mysqli->commit();
+        jsonResult(['success' => true, 'deleted' => $deleted]);
+    } catch (Throwable $error) {
+        $mysqli->rollback();
+        jsonResult(['error' => 'Không xóa được tài khoản'], 500);
+    }
+}
+
 if ($action === 'update' && $method === 'PUT') {
     $body = json_decode(file_get_contents('php://input'), true);
     if (!$body) jsonResult(['error' => 'Payload invalid'], 400);

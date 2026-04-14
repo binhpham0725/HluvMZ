@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${rankOptions.map((rank) => `<option value="${HluvUI.escapeHtml(rank)}" ${rank === (Number(user.rank_manual || 0) ? user.rank : 'auto') ? 'selected' : ''}>${HluvUI.escapeHtml(optionLabel(rank))}</option>`).join('')}
                 </select>
                 <button class="btn btn-small" type="submit" ${isAdminRow ? 'disabled' : ''}>Lưu</button>
+                <button class="btn btn-small btn-delete btn-delete-user" type="button" ${isAdminRow ? 'disabled' : ''}>Xóa</button>
             </form>
         `;
 
@@ -60,6 +61,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await loadUsers();
             } catch (error) {
                 HluvUI.handleError(error, 'Không cập nhật được cấp bậc.');
+            } finally {
+                HluvUI.setButtonLoading(button, false);
+            }
+        });
+
+        row.querySelector('.btn-delete-user').addEventListener('click', async () => {
+            const label = user.name || user.email || `ID ${user.id}`;
+            const ok = window.confirm(`Xóa tài khoản "${label}" và toàn bộ dữ liệu liên quan? Hành động này không thể hoàn tác.`);
+            if (!ok) return;
+
+            const button = row.querySelector('.btn-delete-user');
+            HluvUI.setButtonLoading(button, true, 'Đang xóa...');
+            try {
+                await HluvUserService.remove(admin.id, user.id);
+                HluvUI.notify('Đã xóa tài khoản.', 'success');
+                await loadUsers();
+            } catch (error) {
+                HluvUI.handleError(error, 'Không xóa được tài khoản.');
             } finally {
                 HluvUI.setButtonLoading(button, false);
             }

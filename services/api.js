@@ -649,6 +649,49 @@
         return { success: true, deleted: rows?.length || 0 };
     }
 
+    async function deleteUserByAdmin(adminId, userId) {
+        const admin = await fetchUserById(adminId);
+        const user = await fetchUserById(userId);
+        if (!isAdminUser(admin)) throw new ApiError('Admin required', 403);
+        if (!user) throw new ApiError('User not found', 404);
+        if (Number(admin.id) === Number(user.id)) throw new ApiError('Không thể tự xóa tài khoản đang đăng nhập.', 400);
+        if (isAdminUser(user)) throw new ApiError('Không thể xóa tài khoản admin.', 400);
+
+        const userPosts = await supabaseRest('posts', {
+            params: { select: 'id', user_id: `eq.${Number(user.id)}` }
+        });
+        const postIds = uniq((userPosts || []).map((post) => post.id));
+        const postIdFilter = postIds.length ? inFilter(postIds) : '';
+
+        if (postIdFilter) {
+            await supabaseRest('comments', { method: 'DELETE', params: { post_id: postIdFilter }, prefer: 'return=minimal' });
+            await supabaseRest('likes', { method: 'DELETE', params: { post_id: postIdFilter }, prefer: 'return=minimal' });
+            await supabaseRest('bookmarks', { method: 'DELETE', params: { post_id: postIdFilter }, prefer: 'return=minimal' });
+        }
+
+        await supabaseRest('comments', { method: 'DELETE', params: { user_id: `eq.${Number(user.id)}` }, prefer: 'return=minimal' });
+        await supabaseRest('likes', { method: 'DELETE', params: { user_id: `eq.${Number(user.id)}` }, prefer: 'return=minimal' });
+        await supabaseRest('bookmarks', { method: 'DELETE', params: { user_id: `eq.${Number(user.id)}` }, prefer: 'return=minimal' });
+        await supabaseRest('posts', { method: 'DELETE', params: { user_id: `eq.${Number(user.id)}` }, prefer: 'return=minimal' });
+
+        const profile = await fetchProfileByEmail(user.email).catch(() => null);
+        if (profile?.id) {
+            await supabaseRest('profiles', {
+                method: 'DELETE',
+                params: { id: `eq.${profile.id}` },
+                prefer: 'return=minimal'
+            }).catch((error) => console.warn('Không xóa được profile Supabase Auth.', error));
+        }
+
+        const rows = await supabaseRest('users', {
+            method: 'DELETE',
+            params: { id: `eq.${Number(user.id)}` },
+            prefer: 'return=representation'
+        });
+
+        return { success: true, deleted: rows?.length || 0 };
+    }
+
     async function supabaseRequest(endpoint, params = {}, options = {}) {
         const action = params.action || '';
         if (endpoint === 'posts.php') {
@@ -689,6 +732,7 @@
             if (action === 'update') return updateUser(options.body || {});
             if (action === 'verify-password') return verifyPassword(options.body?.id, options.body?.password);
             if (action === 'change-password') return changePassword(options.body?.id, options.body?.current_password, options.body?.new_password);
+            if (action === 'delete') return deleteUserByAdmin(params.admin_id, params.user_id);
         }
         if (endpoint === 'bookmarks.php') {
             if (action === 'list') return listBookmarks(params.user_id);
