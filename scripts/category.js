@@ -6,9 +6,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const count = document.getElementById('category-count');
     const section = document.getElementById('articles');
     const tabs = document.getElementById('category-tabs');
-    const searchInput = document.getElementById('category-search');
-    let posts = [];
-    let currentCategory = selected;
 
     function renderTabs() {
         tabs.innerHTML = '';
@@ -17,39 +14,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             link.className = 'chip';
             link.href = `category.html?id=${encodeURIComponent(category.id)}`;
             link.textContent = category.name;
-            link.classList.toggle('active', category.name === currentCategory);
+            link.classList.toggle('active', category.name === selected);
             tabs.appendChild(link);
         });
     }
 
-    function visiblePosts() {
-        const keyword = searchInput.value.trim().toLowerCase();
-        return posts.filter((post) => {
-            const matchCategory = currentCategory === 'Tất cả' || post.category === currentCategory;
-            const haystack = `${post.title || ''} ${post.excerpt || ''} ${post.content || ''}`.toLowerCase();
-            return matchCategory && (!keyword || haystack.includes(keyword));
-        });
-    }
-
-    function renderPosts() {
-        const items = visiblePosts();
-        title.textContent = currentCategory === 'Tất cả' ? 'Tất cả tin tức' : currentCategory;
-        count.textContent = `${items.length} bài viết`;
-        section.innerHTML = '';
-        if (!items.length) {
-            HluvUI.renderState(section, 'Không có bài viết phù hợp.');
-            return;
-        }
-        items.forEach((post) => section.appendChild(HluvUI.renderPostCard(post)));
-    }
-
+    title.textContent = selected === 'Tất cả' ? 'Tất cả tin tức' : selected;
     renderTabs();
-    HluvUI.renderState(section, 'Đang tải tin tức...');
+    HluvUI.renderState(section, 'Đang tải chuyên mục...');
 
     try {
-        posts = await HluvApi.posts.list();
-        renderPosts();
-        searchInput.addEventListener('input', renderPosts);
+        const posts = await HluvApi.posts.list(selected === 'Tất cả' ? {} : { category: selected });
+        count.textContent = `${posts.length} bài viết`;
+        section.innerHTML = '';
+        if (!posts.length) {
+            HluvUI.renderState(section, 'Chưa có bài viết trong chuyên mục này.');
+            return;
+        }
+        posts.forEach((post) => section.appendChild(HluvUI.renderPostCard(post)));
     } catch (error) {
         count.textContent = '';
         HluvUI.renderState(section, error.message || HLUV_MESSAGES.loadPostsError, 'error');

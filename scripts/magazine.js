@@ -1,86 +1,71 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const coverEl = document.getElementById('magazine-cover');
-    const picksEl = document.getElementById('editor-picks');
-    const sectionsEl = document.getElementById('magazine-sections');
+    const listEl = document.getElementById('magazine-list');
+    const categorySelect = document.getElementById('magazine-category');
+    const sortSelect = document.getElementById('magazine-sort');
+    const loadMoreBtn = document.getElementById('magazine-load-more');
+    const countEl = document.getElementById('magazine-count');
+    let posts = [];
+    let page = 1;
+    const pageSize = 6;
 
-    function openArticle(id) {
-        window.location.href = `article.html?id=${encodeURIComponent(id)}`;
+    function renderCategoryOptions() {
+        HLUV_CONFIG.categories
+            .filter((category) => category.name !== 'Tất cả')
+            .forEach((category) => {
+                const option = document.createElement('option');
+                option.value = category.name;
+                option.textContent = category.name;
+                categorySelect.appendChild(option);
+            });
     }
 
-    function coverMarkup(post) {
-        const image = post.image_url || HLUV_CONFIG.placeholderImage;
-        return `
-            <article class="magazine-cover-card" data-id="${HluvUI.escapeHtml(post.id)}">
-                <img src="${HluvUI.escapeHtml(image)}" alt="${HluvUI.escapeHtml(post.title || '')}" onerror="this.src='${HLUV_CONFIG.placeholderImage}'">
-                <div>
-                    <p class="story-meta">${HluvUI.escapeHtml(post.category || 'Tin tức')}</p>
-                    <h3>${HluvUI.escapeHtml(post.title || 'Không có tiêu đề')}</h3>
-                    <p>${HluvUI.escapeHtml(post.excerpt || HluvUI.truncate(post.content, 220))}</p>
-                    <button class="btn primary" type="button">Đọc bài cover</button>
-                </div>
-            </article>
-        `;
+    function sortedPosts() {
+        const category = categorySelect.value;
+        const filtered = posts.filter((post) => category === 'Tất cả' || post.category === category);
+        return filtered.sort((a, b) => {
+            if (sortSelect.value === 'popular') return Number(b.views || 0) - Number(a.views || 0);
+            return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        });
     }
 
-    function pickMarkup(post, index) {
-        return `
-            <button class="editor-pick" type="button" data-id="${HluvUI.escapeHtml(post.id)}">
-                <span>${String(index + 1).padStart(2, '0')}</span>
-                <strong>${HluvUI.escapeHtml(post.title || 'Không có tiêu đề')}</strong>
-            </button>
-        `;
-    }
-
-    function sectionMarkup(category, posts) {
-        return `
-            <section class="magazine-section">
-                <div class="section-heading">
-                    <div>
-                        <p class="story-meta">${HluvUI.escapeHtml(category)}</p>
-                        <h3>${HluvUI.escapeHtml(category)}</h3>
-                    </div>
-                    <a class="chip" href="category.html?id=${encodeURIComponent(HLUV_CONFIG.categories.find((item) => item.name === category)?.id || '0')}">Xem chuyên mục</a>
-                </div>
-                <div class="related-grid">
-                    ${posts.map((post) => HluvUI.renderPostCard(post, { className: 'cardsmall', compact: true }).outerHTML).join('')}
-                </div>
-            </section>
-        `;
-    }
-
-    HluvUI.renderState(coverEl, 'Đang dàn trang magazine...');
-    HluvUI.renderState(picksEl, 'Đang tải lựa chọn...');
-    HluvUI.renderState(sectionsEl, 'Đang tải chuyên mục...');
-
-    try {
-        const posts = await HluvPostService.list();
-        if (!posts.length) {
-            HluvUI.renderState(coverEl, HLUV_MESSAGES.emptyPosts);
-            HluvUI.renderState(picksEl, 'Chưa có lựa chọn.');
-            HluvUI.renderState(sectionsEl, 'Chưa có chuyên mục.');
+    function renderList(append = false) {
+        const items = sortedPosts();
+        const visible = items.slice(0, page * pageSize);
+        countEl.textContent = `${items.length} bài viết`;
+        if (!append) listEl.innerHTML = '';
+        if (!visible.length) {
+            HluvUI.renderState(listEl, 'Không có bài viết phù hợp.');
+            loadMoreBtn.style.display = 'none';
             return;
         }
 
-        coverEl.innerHTML = coverMarkup(posts[0]);
-        picksEl.innerHTML = posts.slice(1, 5).map(pickMarkup).join('') || '<p class="ui-state">Chưa có bài phụ.</p>';
+        listEl.innerHTML = '';
+        visible.forEach((post) => listEl.appendChild(HluvUI.renderPostCard(post, { className: 'magazine-card' })));
+        loadMoreBtn.style.display = items.length > visible.length ? 'inline-flex' : 'none';
+    }
 
-        const sectionHtml = HLUV_CONFIG.categories
-            .filter((category) => category.name !== 'Tất cả')
-            .map((category) => {
-                const items = posts.filter((post) => post.category === category.name).slice(0, 4);
-                return items.length ? sectionMarkup(category.name, items) : '';
-            })
-            .filter(Boolean)
-            .join('');
-        sectionsEl.innerHTML = sectionHtml || '<p class="ui-state">Chưa có dữ liệu chuyên mục.</p>';
+    function resetAndRender() {
+        page = 1;
+        renderList(false);
+    }
 
-        document.querySelectorAll('[data-id]').forEach((item) => {
-            item.addEventListener('click', () => openArticle(item.dataset.id));
-        });
+    renderCategoryOptions();
+    HluvUI.renderState(listEl, 'Đang tải toàn bộ bài viết...');
+    loadMoreBtn.style.display = 'none';
+
+    try {
+        posts = await HluvPostService.list();
+        resetAndRender();
     } catch (error) {
-        HluvUI.renderState(coverEl, error.message || HLUV_MESSAGES.loadPostsError, 'error');
-        HluvUI.renderState(picksEl, 'Không tải được lựa chọn.', 'error');
-        HluvUI.renderState(sectionsEl, 'Không tải được chuyên mục.', 'error');
+        countEl.textContent = '';
+        HluvUI.renderState(listEl, error.message || HLUV_MESSAGES.loadPostsError, 'error');
         HluvUI.handleError(error, HLUV_MESSAGES.loadPostsError);
     }
+
+    categorySelect.addEventListener('change', resetAndRender);
+    sortSelect.addEventListener('change', resetAndRender);
+    loadMoreBtn.addEventListener('click', () => {
+        page += 1;
+        renderList(true);
+    });
 });

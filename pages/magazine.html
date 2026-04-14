@@ -18,31 +18,34 @@
             <div class="hero-left">
                 <p class="story-meta">Magazine Online</p>
                 <h1>Tạp chí Đại học Hoa Lư</h1>
-                <p>Ấn phẩm dạng magazine: một bài cover nổi bật, các lựa chọn của ban biên tập và từng cụm chuyên mục để đọc như một số báo online.</p>
+                <p>Trang Magazine là nơi hiển thị toàn bộ bài viết theo dạng tạp chí, giúp người dùng đọc nội dung một cách tập trung hơn.</p>
             </div>
             <aside class="right-aside p-3">
-                <p class="story-meta">Editor's Picks</p>
-                <h3>Ban biên tập chọn</h3>
-                <div id="editor-picks" class="editor-picks"></div>
+                <p class="story-meta">Điều khiển đọc</p>
+                <h3>Lọc và sắp xếp</h3>
+                <div class="magazine-controls">
+                    <select id="magazine-category">
+                        <option value="Tất cả">Tất cả chuyên mục</option>
+                    </select>
+                    <select id="magazine-sort">
+                        <option value="newest">Mới nhất</option>
+                        <option value="popular">Phổ biến</option>
+                    </select>
+                </div>
             </aside>
         </section>
         <section class="section">
             <div class="section-heading">
                 <div>
-                    <p class="story-meta">Cover Story</p>
-                    <h2>Bài nổi bật trong số này</h2>
+                    <p class="story-meta">Danh sách đầy đủ</p>
+                    <h2>Toàn bộ bài viết</h2>
                 </div>
+                <p id="magazine-count"></p>
             </div>
-            <div id="magazine-cover" class="magazine-cover"></div>
-        </section>
-        <section class="section">
-            <div class="section-heading">
-                <div>
-                    <p class="story-meta">Theo chuyên mục</p>
-                    <h2>Các lát cắt nội dung</h2>
-                </div>
+            <div id="magazine-list" class="magazine-list"></div>
+            <div class="load-more-wrap">
+                <button class="chip" id="magazine-load-more" type="button">Xem thêm</button>
             </div>
-            <div id="magazine-sections" class="magazine-sections"></div>
         </section>
     </main>
     <button id="back-top">↑</button>

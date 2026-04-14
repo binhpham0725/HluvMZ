@@ -16,17 +16,21 @@
     <main>
         <section class="hero">
             <div class="hero-main">
-                <p class="story-meta">Magazine Online</p>
-                <h1>Website Tạp Chí Đại học Hoa Lư - Công nghệ, Đời sống, Học tập, Giải trí</h1>
-                <p>Chào mừng bạn đến với nền tảng tin tức học thuật và phong cách sống dành cho sinh viên ĐH Hoa Lư.</p>
+                <p class="story-meta">Bài viết nổi bật</p>
+                <h1 id="home-hero-title">Website Tạp Chí Đại học Hoa Lư</h1>
+                <p id="home-hero-desc">Trang Home đóng vai trò tổng hợp nội dung, giúp người dùng tiếp cận nhanh các bài viết mới và nổi bật.</p>
                 <div class="hero-actions">
-                    <a class="btn primary" href="magazine.html">Đọc bản Magazine</a>
+                    <a class="btn primary" id="home-hero-link" href="magazine.html">Đọc bài nổi bật</a>
                     <a class="btn secondary" href="category.html?id=0">Xem tin tức</a>
                 </div>
             </div>
             <aside class="right-aside p-3 home-digest">
-                <p class="story-meta">Tổng quan</p>
-                <h3>Điểm nhanh hôm nay</h3>
+                <p class="story-meta">Tìm kiếm nhanh</p>
+                <h3>Bạn muốn đọc gì?</h3>
+                <div class="quick-search">
+                    <input id="home-search-input" type="search" placeholder="Nhập từ khóa..." />
+                    <button class="chip" id="home-search-btn" type="button">Tìm</button>
+                </div>
                 <div class="home-metrics">
                     <div><strong id="home-post-count">0</strong><span>Bài viết</span></div>
                     <div><strong id="home-category-count">5</strong><span>Chuyên mục</span></div>
@@ -37,12 +41,30 @@
         <section id="news" class="section">
             <div class="section-heading">
                 <div>
-                    <p class="story-meta">Mới trên trang chủ</p>
-                    <h2>3 bài mới nhất</h2>
+                    <p class="story-meta">Chuyên mục nhanh</p>
+                    <h2>Lọc nhanh nội dung</h2>
                 </div>
-                <a class="chip" href="category.html?id=0">Xem tất cả</a>
             </div>
-            <div id="articles" class="story-grid"></div>
+            <div id="home-category-filters" class="filters"></div>
+        </section>
+        <section class="section">
+            <div class="section-heading">
+                <div>
+                    <p class="story-meta">Cập nhật mới</p>
+                    <h2>Bài mới nhất</h2>
+                </div>
+                <a class="chip" href="magazine.html">Đọc thêm</a>
+            </div>
+            <div id="latest-posts" class="story-grid"></div>
+        </section>
+        <section class="section">
+            <div class="section-heading">
+                <div>
+                    <p class="story-meta">Xu hướng</p>
+                    <h2>Đang được quan tâm</h2>
+                </div>
+            </div>
+            <div id="trending-posts" class="trending-grid"></div>
         </section>
         <section id="about" class="section">
             <div class="panel">
