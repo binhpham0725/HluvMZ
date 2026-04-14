@@ -40,8 +40,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             item.className = 'trending-row';
             item.href = `article.html?id=${encodeURIComponent(post.id)}`;
             item.innerHTML = `
-                <span>${String(index + 1).padStart(2, '0')}</span>
-                <div>
+                <span class="trending-rank">${String(index + 1).padStart(2, '0')}</span>
+                <div class="trending-copy">
                     <strong>${HluvUI.escapeHtml(post.title || 'Không có tiêu đề')}</strong>
                     <small>${HluvUI.escapeHtml(post.category || 'Tin tức')}</small>
                 </div>
