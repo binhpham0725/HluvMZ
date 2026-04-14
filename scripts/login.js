@@ -12,6 +12,17 @@ document.addEventListener('DOMContentLoaded', () => {
         registerForm.style.display = isLogin ? 'none' : 'block';
     }
 
+    function recordActivityDay(userId) {
+        const key = `${HLUV_CONFIG.storageKeys.currentUser}-${userId}-activity-days`;
+        const today = new Date().toISOString().slice(0, 10);
+        const days = HluvStorage.getJson(key, []);
+        const next = Array.isArray(days) ? days : [];
+        if (!next.includes(today)) {
+            next.push(today);
+            HluvStorage.setJson(key, next.slice(-30));
+        }
+    }
+
     tabLogin.addEventListener('click', () => showTab('login'));
     tabRegister.addEventListener('click', () => showTab('register'));
     HluvUI.renderBubbles('.bubble-container', 30);
@@ -29,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const data = await HluvApi.users.login(email, password);
             HluvUI.setCurrentUser(data.user);
+            recordActivityDay(data.user.id);
             HluvUI.notify(HLUV_MESSAGES.loginSuccess, 'success');
             window.location.href = 'profile.html';
         } catch (error) {
@@ -65,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const loginData = await HluvApi.users.login(email, password);
             HluvUI.setCurrentUser(loginData.user);
+            recordActivityDay(loginData.user.id);
             HluvUI.notify(HLUV_MESSAGES.registerSuccess, 'success');
             window.location.href = 'profile.html';
         } catch (error) {

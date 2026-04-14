@@ -15,6 +15,7 @@
                 <div class="profile-avatar-wrap" id="profile-avatar-wrap">
                     <img id="avatar" src="https://i.pravatar.cc/120" alt="Avatar" />
                     <span class="admin-badge" id="profile-admin-badge" hidden>admin</span>
+                    <span class="rank-badge" id="profile-rank-badge"></span>
                 </div>
                 <div>
                     <p class="story-meta">Hồ sơ cá nhân</p>
@@ -30,7 +31,22 @@
                 <a class="profile-action" href="profile-posts.html">Bài đăng <strong id="post-count">0</strong></a>
                 <a class="profile-action" href="profile-reads.html">Đã đọc <strong id="read-count">0</strong></a>
                 <a class="profile-action primary" href="post-editor.html">Đăng bài</a>
+                <a class="profile-action admin-only" id="admin-rank-link" href="admin-ranks.html" hidden>Quản lý cấp bậc</a>
             </div>
+        </section>
+        <section class="panel p-4" id="rank-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="story-meta">Gamification</p>
+                    <h3>Cấp bậc & nhiệm vụ</h3>
+                </div>
+                <span class="rank-badge" id="rank-summary">🌱 Bần Nông</span>
+            </div>
+            <div class="rank-progress">
+                <div class="rank-progress-bar" id="rank-progress-bar"></div>
+            </div>
+            <p class="profile-extra" id="rank-progress-text">0 XP</p>
+            <div class="rank-missions" id="rank-missions"></div>
         </section>
         <section class="footer-section">
             <h3 style="margin-top:0;">Tài khoản</h3>

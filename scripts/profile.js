@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         avatarWrap: document.getElementById('profile-avatar-wrap'),
         avatar: document.getElementById('avatar'),
         adminBadge: document.getElementById('profile-admin-badge'),
+        rankBadge: document.getElementById('profile-rank-badge'),
+        rankSummary: document.getElementById('rank-summary'),
+        rankProgressBar: document.getElementById('rank-progress-bar'),
+        rankProgressText: document.getElementById('rank-progress-text'),
+        rankMissions: document.getElementById('rank-missions'),
+        rankPanel: document.getElementById('rank-panel'),
+        adminRankLink: document.getElementById('admin-rank-link'),
         bookmarkCount: document.getElementById('bookmark-count'),
         postCount: document.getElementById('post-count'),
         readCount: document.getElementById('read-count'),
@@ -42,6 +49,111 @@ document.addEventListener('DOMContentLoaded', async () => {
         return user.avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(user.email || user.name || 'guest')}`;
     }
 
+    function userReadProgress() {
+        return HluvStorage.getJson(HLUV_CONFIG.storageKeys.readProgress, {});
+    }
+
+    function userActivityDays() {
+        const days = HluvStorage.getJson(`${HLUV_CONFIG.storageKeys.currentUser}-${user.id}-activity-days`, []);
+        return Array.isArray(days) ? days.length : 0;
+    }
+
+    function readCategories(progress) {
+        return new Set(Object.values(progress).map((item) => item?.category).filter(Boolean)).size;
+    }
+
+    function missionItem(done, text) {
+        return `<li class="${done ? 'done' : ''}"><span>${done ? '✓' : '•'}</span>${HluvUI.escapeHtml(text)}</li>`;
+    }
+
+    function renderRankMissions(stats, readCount) {
+        if (!els.rankMissions) return;
+        const progress = userReadProgress();
+        const categories = readCategories(progress);
+        const searches = Number(localStorage.getItem(`${HLUV_CONFIG.storageKeys.currentUser}-${user.id}-search-count`) || 0);
+        const edited = Number(localStorage.getItem(`${HLUV_CONFIG.storageKeys.currentUser}-${user.id}-edited-post`) || 0);
+        const activeDays = userActivityDays();
+        const levels = [
+            {
+                title: '🌱 Bần Nông',
+                desc: 'Người mới bước vào thế giới tri thức',
+                items: [
+                    [true, 'Đăng nhập lần đầu'],
+                    [readCount >= 3, `Đọc 3 bài bất kỳ (${readCount}/3)`],
+                    [searches >= 1, `Tìm kiếm 1 lần (${searches}/1)`],
+                ]
+            },
+            {
+                title: '🧑‍🌾 Thường Dân',
+                desc: 'Bắt đầu quan tâm nội dung',
+                items: [
+                    [stats.bookmarks >= 3, `Bookmark 3 bài (${stats.bookmarks}/3)`],
+                    [categories >= 2, `Đọc bài thuộc ≥ 2 chuyên mục (${categories}/2)`],
+                    [stats.likes >= 5, `Like 5 bài (${stats.likes}/5)`],
+                ]
+            },
+            {
+                title: '🎓 Học Sĩ',
+                desc: 'Người bắt đầu tạo giá trị',
+                items: [
+                    [stats.posts >= 1, `Đăng bài đầu tiên (${stats.posts}/1)`],
+                    [edited >= 1, `Sửa bài viết (${edited}/1)`],
+                    [stats.max_post_views >= 5, `Đạt ≥ 5 lượt xem bài (${stats.max_post_views}/5)`],
+                ]
+            },
+            {
+                title: '🏰 Quý Tộc',
+                desc: 'Người có ảnh hưởng',
+                items: [
+                    [stats.posts >= 5, `Đăng 5 bài (${stats.posts}/5)`],
+                    [stats.max_post_views >= 10, `1 bài được ≥ 10 lượt xem (${stats.max_post_views}/10)`],
+                    [stats.received_bookmarks >= 1, `Có người bookmark bài của mình (${stats.received_bookmarks}/1)`],
+                ]
+            },
+            {
+                title: '👑 Vương Giả',
+                desc: 'Top creator của hệ thống',
+                items: [
+                    [stats.posts >= 10, `Đăng 10 bài (${stats.posts}/10)`],
+                    [stats.max_post_views >= 10, `1 bài trending (${stats.max_post_views}/10 views)`],
+                    [activeDays >= 7, `Hoạt động ≥ 7 ngày (${activeDays}/7)`],
+                ]
+            }
+        ];
+
+        els.rankMissions.innerHTML = levels.map((level) => `
+            <article class="mission-card">
+                <h4>${HluvUI.escapeHtml(level.title)}</h4>
+                <p>${HluvUI.escapeHtml(level.desc)}</p>
+                <ul>${level.items.map(([done, text]) => missionItem(done, text)).join('')}</ul>
+            </article>
+        `).join('');
+    }
+
+    function renderRankSummary(stats = {}) {
+        const isAdmin = HluvUI.isAdminUser(user);
+        const rankInfo = HluvUI.getRankInfo(user);
+        if (els.adminRankLink) els.adminRankLink.hidden = !isAdmin;
+        if (els.rankBadge) {
+            els.rankBadge.hidden = isAdmin;
+            els.rankBadge.innerHTML = isAdmin ? '' : `${HluvUI.escapeHtml(rankInfo.icon)} ${HluvUI.escapeHtml(rankInfo.label)}`;
+        }
+        if (els.rankPanel) els.rankPanel.hidden = isAdmin;
+        if (isAdmin) return;
+
+        const xp = Number(user.xp || 0);
+        const nextMap = { 'Bần Nông': 20, 'Thường Dân': 50, 'Học Sĩ': 100, 'Quý Tộc': 200, 'Vương Giả': 200, 'Vô Gia Cư': 20 };
+        const next = nextMap[rankInfo.label] || 20;
+        const pct = rankInfo.label === 'Vương Giả' ? 100 : Math.min(100, Math.round((xp / next) * 100));
+        if (els.rankSummary) els.rankSummary.innerHTML = `${HluvUI.escapeHtml(rankInfo.icon)} ${HluvUI.escapeHtml(rankInfo.label)}`;
+        if (els.rankProgressBar) els.rankProgressBar.style.width = `${pct}%`;
+        if (els.rankProgressText) {
+            els.rankProgressText.textContent = user.rank_manual ? `${xp} XP · cấp do admin thiết lập` : `${xp} XP · mốc tiếp theo ${next} XP`;
+        }
+        const readCount = Object.keys(userReadProgress()).length;
+        renderRankMissions(stats, readCount);
+    }
+
     function renderUser() {
         els.fullname.textContent = user.name || 'Người dùng';
         els.email.textContent = user.email || '';
@@ -56,15 +168,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isAdmin = HluvUI.isAdminUser(user);
         els.avatarWrap?.classList.toggle('admin-avatar', isAdmin);
         if (els.adminBadge) els.adminBadge.hidden = !isAdmin;
+        renderRankSummary();
 
         const headerArea = document.querySelector('.user-area');
         const headerAvatarFrame = document.querySelector('.user-area .avatar-frame');
         const headerAvatar = document.querySelector('.user-area img');
         const headerName = document.querySelector('.user-name');
+        const headerRank = document.querySelector('.user-area .rank-badge');
         headerArea?.classList.toggle('admin-user', isAdmin);
         headerAvatarFrame?.classList.toggle('admin-avatar', isAdmin);
         if (headerAvatar) headerAvatar.src = els.avatar.src;
         if (headerName) headerName.textContent = user.name || user.email || 'Người dùng';
+        if (headerRank && !isAdmin) headerRank.innerHTML = HluvUI.rankBadgeMarkup(user).replace(/<[^>]*>/g, '');
     }
 
     async function renderCounts() {
@@ -75,6 +190,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             ]);
             els.bookmarkCount.textContent = bookmarks.length;
             els.postCount.textContent = posts.length;
+            const stats = await HluvUserService.stats(user.id);
+            renderRankSummary(stats);
         } catch (error) {
             HluvUI.handleError(error, 'Không tải được thống kê hồ sơ.');
         }
@@ -232,6 +349,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         els.editAvatarPreview.style.display = 'block';
     };
 
+    try {
+        user = await HluvUserService.profile(user.id);
+        HluvUI.setCurrentUser(user);
+    } catch (error) {
+        HluvUI.handleError(error, 'Không tải được cấp bậc mới nhất.');
+    }
     renderUser();
     renderCounts();
 });

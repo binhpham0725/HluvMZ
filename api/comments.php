@@ -31,7 +31,7 @@ if ($action === 'list' && $method === 'GET') {
     if (!$postId) jsonResult(['error' => 'post_id required'], 400);
 
     $stmt = $mysqli->prepare(
-        'SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.name AS author_name, u.avatar AS author_avatar, u.role AS author_role
+        'SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.name AS author_name, u.avatar AS author_avatar, u.role AS author_role, u.xp AS author_xp, u.rank AS author_rank, u.rank_manual AS author_rank_manual
          FROM comments c
          JOIN users u ON c.user_id = u.id
          WHERE c.post_id=?

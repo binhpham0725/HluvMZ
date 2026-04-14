@@ -81,9 +81,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             if (editId) {
                 await HluvPostService.update(payload);
+                const editedKey = `${HLUV_CONFIG.storageKeys.currentUser}-${user.id}-edited-post`;
+                localStorage.setItem(editedKey, String(Number(localStorage.getItem(editedKey) || 0) + 1));
                 HluvUI.notify(HLUV_MESSAGES.updatePostSuccess, 'success');
             } else {
                 await HluvPostService.create(payload);
+                const freshUser = await HluvUserService.profile(user.id);
+                HluvUI.setCurrentUser(freshUser);
                 HluvUI.notify(HLUV_MESSAGES.createPostSuccess, 'success');
             }
             window.location.href = 'profile-posts.html';

@@ -222,6 +222,11 @@ ALTER TABLE `posts`
 ALTER TABLE `users`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
+-- Gamification rank system
+ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `xp` int(11) NOT NULL DEFAULT 0;
+ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `rank` varchar(50) NOT NULL DEFAULT 'Bần Nông';
+ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `rank_manual` tinyint(1) NOT NULL DEFAULT 0;
+
 --
 -- Constraints for dumped tables
 --

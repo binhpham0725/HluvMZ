@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
         HluvUI.renderState(result, 'Đang tìm kiếm...');
         HluvUI.setButtonLoading(btnSearch, true, 'Đang tìm...');
         try {
+            const currentUser = HluvUI.getCurrentUser();
+            if (currentUser) {
+                const key = `${HLUV_CONFIG.storageKeys.currentUser}-${currentUser.id}-search-count`;
+                localStorage.setItem(key, String(Number(localStorage.getItem(key) || 0) + 1));
+            }
             const posts = await HluvApi.posts.list({ q });
             result.innerHTML = '';
             if (!posts.length) {

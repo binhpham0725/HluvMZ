@@ -5,7 +5,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 function publicUser(mysqli $mysqli, int $id) {
-    $stmt = $mysqli->prepare('SELECT id,name,email,avatar,gender,birthdate,bio,role,created_at,updated_at FROM users WHERE id=? LIMIT 1');
+    $stmt = $mysqli->prepare('SELECT id,name,email,avatar,gender,birthdate,bio,role,xp,rank,rank_manual,created_at,updated_at FROM users WHERE id=? LIMIT 1');
     $stmt->bind_param('i', $id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -38,6 +38,64 @@ function passwordMatches(mysqli $mysqli, int $id, string $password): bool {
 
     $user = $res->fetch_assoc();
     return password_verify($password, $user['password']);
+}
+
+function rankCatalog(): array {
+    return [
+        'Vô Gia Cư' => ['icon' => '👩‍🦽', 'min_xp' => 0],
+        'Bần Nông' => ['icon' => '🌱', 'min_xp' => 0],
+        'Thường Dân' => ['icon' => '🧑‍🌾', 'min_xp' => 20],
+        'Học Sĩ' => ['icon' => '🎓', 'min_xp' => 50],
+        'Quý Tộc' => ['icon' => '🏰', 'min_xp' => 100],
+        'Vương Giả' => ['icon' => '👑', 'min_xp' => 200],
+    ];
+}
+
+function rankFromXp(int $xp): string {
+    if ($xp < 20) return 'Bần Nông';
+    if ($xp < 50) return 'Thường Dân';
+    if ($xp < 100) return 'Học Sĩ';
+    if ($xp < 200) return 'Quý Tộc';
+    return 'Vương Giả';
+}
+
+function normalizeRank(string $rank): ?string {
+    $rank = trim($rank);
+    return array_key_exists($rank, rankCatalog()) ? $rank : null;
+}
+
+function isAdminUser(mysqli $mysqli, int $id): bool {
+    $stmt = $mysqli->prepare('SELECT email,role FROM users WHERE id=? LIMIT 1');
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows !== 1) return false;
+
+    $user = $res->fetch_assoc();
+    return ($user['role'] ?? '') === 'admin' || strtolower($user['email'] ?? '') === 'admin@webtapchi.local';
+}
+
+function addUserXp(mysqli $mysqli, int $userId, int $amount): ?array {
+    if ($amount <= 0) return publicUser($mysqli, $userId);
+
+    $stmt = $mysqli->prepare('SELECT id,role,xp,rank,rank_manual FROM users WHERE id=? LIMIT 1');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows !== 1) return null;
+
+    $user = $res->fetch_assoc();
+    if (($user['role'] ?? '') === 'admin') return publicUser($mysqli, $userId);
+
+    $xp = max(0, intval($user['xp'] ?? 0) + $amount);
+    $rankManual = intval($user['rank_manual'] ?? 0);
+    $rank = $rankManual ? ($user['rank'] ?: 'Bần Nông') : rankFromXp($xp);
+
+    $upd = $mysqli->prepare('UPDATE users SET xp=?, rank=?, updated_at=NOW() WHERE id=?');
+    $upd->bind_param('isi', $xp, $rank, $userId);
+    $upd->execute();
+
+    return publicUser($mysqli, $userId);
 }
 
 if ($action === 'register' && $method === 'POST') {
@@ -79,7 +137,7 @@ if ($action === 'login' && $method === 'POST') {
     $password = trim($body['password'] ?? '');
     if (!$email || !$password) jsonResult(['error' => 'Email, password required'], 400);
 
-    $stmt = $mysqli->prepare('SELECT id,name,email,password,avatar,gender,birthdate,bio,role FROM users WHERE email=? LIMIT 1');
+    $stmt = $mysqli->prepare('SELECT id,name,email,password,avatar,gender,birthdate,bio,role,xp,rank,rank_manual FROM users WHERE email=? LIMIT 1');
     $stmt->bind_param('s', $email);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -101,6 +159,107 @@ if ($action === 'profile' && $method === 'GET') {
     $user = publicUser($mysqli, $id);
     if (!$user) jsonResult(['error' => 'User not found'], 404);
     jsonResult($user);
+}
+
+if ($action === 'rank-catalog' && $method === 'GET') {
+    jsonResult(rankCatalog());
+}
+
+if ($action === 'list' && $method === 'GET') {
+    $adminId = intval($_GET['admin_id'] ?? 0);
+    if (!$adminId || !isAdminUser($mysqli, $adminId)) jsonResult(['error' => 'Admin required'], 403);
+
+    $res = $mysqli->query('SELECT id,name,email,avatar,role,xp,rank,rank_manual,created_at,updated_at FROM users ORDER BY role="admin" DESC, id ASC');
+    jsonResult($res->fetch_all(MYSQLI_ASSOC));
+}
+
+if ($action === 'stats' && $method === 'GET') {
+    $userId = intval($_GET['user_id'] ?? 0);
+    if (!$userId) jsonResult(['error' => 'user_id required'], 400);
+
+    $stats = [
+        'posts' => 0,
+        'bookmarks' => 0,
+        'likes' => 0,
+        'total_views' => 0,
+        'max_post_views' => 0,
+        'received_bookmarks' => 0,
+        'bookmark_categories' => 0,
+    ];
+
+    $stmt = $mysqli->prepare('SELECT COUNT(*) AS posts, COALESCE(SUM(views),0) AS total_views, COALESCE(MAX(views),0) AS max_post_views FROM posts WHERE user_id=? AND status="published"');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stats['posts'] = intval($row['posts'] ?? 0);
+    $stats['total_views'] = intval($row['total_views'] ?? 0);
+    $stats['max_post_views'] = intval($row['max_post_views'] ?? 0);
+
+    $stmt = $mysqli->prepare('SELECT COUNT(*) AS bookmarks FROM bookmarks WHERE user_id=?');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $stats['bookmarks'] = intval($stmt->get_result()->fetch_assoc()['bookmarks'] ?? 0);
+
+    $stmt = $mysqli->prepare('SELECT COUNT(*) AS likes FROM likes WHERE user_id=?');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $stats['likes'] = intval($stmt->get_result()->fetch_assoc()['likes'] ?? 0);
+
+    $stmt = $mysqli->prepare('SELECT COUNT(DISTINCT p.category) AS cats FROM bookmarks b JOIN posts p ON p.id=b.post_id WHERE b.user_id=?');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $stats['bookmark_categories'] = intval($stmt->get_result()->fetch_assoc()['cats'] ?? 0);
+
+    $stmt = $mysqli->prepare('SELECT COUNT(*) AS received FROM bookmarks b JOIN posts p ON p.id=b.post_id WHERE p.user_id=? AND b.user_id<>?');
+    $stmt->bind_param('ii', $userId, $userId);
+    $stmt->execute();
+    $stats['received_bookmarks'] = intval($stmt->get_result()->fetch_assoc()['received'] ?? 0);
+
+    jsonResult($stats);
+}
+
+if ($action === 'add_xp' && $method === 'POST') {
+    $body = json_decode(file_get_contents('php://input'), true);
+    if (!$body) jsonResult(['error' => 'Payload invalid'], 400);
+
+    $userId = intval($body['user_id'] ?? 0);
+    $xp = intval($body['xp'] ?? 0);
+    if (!$userId || $xp <= 0) jsonResult(['error' => 'user_id/xp required'], 400);
+
+    $user = addUserXp($mysqli, $userId, $xp);
+    if (!$user) jsonResult(['error' => 'User not found'], 404);
+    jsonResult(['success' => true, 'user' => $user]);
+}
+
+if ($action === 'update_rank' && ($method === 'POST' || $method === 'PUT')) {
+    $body = json_decode(file_get_contents('php://input'), true);
+    if (!$body) jsonResult(['error' => 'Payload invalid'], 400);
+
+    $adminId = intval($body['admin_id'] ?? 0);
+    $userId = intval($body['user_id'] ?? 0);
+    $rankInput = trim($body['rank'] ?? '');
+    if (!$adminId || !$userId || !$rankInput) jsonResult(['error' => 'admin_id/user_id/rank required'], 400);
+    if (!isAdminUser($mysqli, $adminId)) jsonResult(['error' => 'Admin required'], 403);
+    if (isAdminUser($mysqli, $userId)) jsonResult(['error' => 'Không chỉnh cấp tài khoản admin'], 400);
+
+    if ($rankInput === 'auto') {
+        $stmt = $mysqli->prepare('SELECT xp FROM users WHERE id=? LIMIT 1');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res->num_rows !== 1) jsonResult(['error' => 'User not found'], 404);
+        $rank = rankFromXp(intval($res->fetch_assoc()['xp'] ?? 0));
+        $manual = 0;
+    } else {
+        $rank = normalizeRank($rankInput);
+        if (!$rank) jsonResult(['error' => 'Rank invalid'], 400);
+        $manual = 1;
+    }
+
+    $stmt = $mysqli->prepare('UPDATE users SET rank=?, rank_manual=?, updated_at=NOW() WHERE id=?');
+    $stmt->bind_param('sii', $rank, $manual, $userId);
+    $stmt->execute();
+    jsonResult(['success' => true, 'user' => publicUser($mysqli, $userId)]);
 }
 
 if ($action === 'update' && $method === 'PUT') {

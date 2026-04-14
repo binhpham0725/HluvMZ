@@ -66,6 +66,36 @@
         ));
     }
 
+    const ranks = {
+        'Vô Gia Cư': { icon: '👩‍🦽', label: 'Vô Gia Cư', minXp: 0 },
+        'Bần Nông': { icon: '🌱', label: 'Bần Nông', minXp: 0 },
+        'Thường Dân': { icon: '🧑‍🌾', label: 'Thường Dân', minXp: 20 },
+        'Học Sĩ': { icon: '🎓', label: 'Học Sĩ', minXp: 50 },
+        'Quý Tộc': { icon: '🏰', label: 'Quý Tộc', minXp: 100 },
+        'Vương Giả': { icon: '👑', label: 'Vương Giả', minXp: 200 }
+    };
+
+    function rankFromXp(xp) {
+        const value = Number(xp) || 0;
+        if (value < 20) return 'Bần Nông';
+        if (value < 50) return 'Thường Dân';
+        if (value < 100) return 'Học Sĩ';
+        if (value < 200) return 'Quý Tộc';
+        return 'Vương Giả';
+    }
+
+    function getRankInfo(user) {
+        if (isAdminUser(user)) return { icon: '', label: 'admin', className: 'rank-admin' };
+        const name = user?.rank || rankFromXp(user?.xp || 0);
+        return ranks[name] || ranks['Bần Nông'];
+    }
+
+    function rankBadgeMarkup(user, extraClass = '') {
+        const info = getRankInfo(user);
+        if (isAdminUser(user)) return '<span class="rank-badge rank-admin">admin</span>';
+        return `<span class="rank-badge ${extraClass}">${escapeHtml(info.icon)} ${escapeHtml(info.label)}</span>`;
+    }
+
     function applyTheme(theme) {
         const next = theme || localStorage.getItem(HLUV_CONFIG.storageKeys.theme) || 'light';
         document.documentElement.setAttribute('data-theme', next);
@@ -151,6 +181,10 @@
         notify,
         handleError,
         isAdminUser,
+        ranks,
+        rankFromXp,
+        getRankInfo,
+        rankBadgeMarkup,
         applyTheme,
         initThemeToggle,
         initBackTop,
@@ -171,6 +205,10 @@
         notify,
         handleError,
         isAdminUser,
+        ranks,
+        rankFromXp,
+        getRankInfo,
+        rankBadgeMarkup,
         renderBubbles,
         validateRequired: (values) => HluvValidators.required(values),
         isEmail: (value) => HluvValidators.email(value),

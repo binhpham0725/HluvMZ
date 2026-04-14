@@ -147,6 +147,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 item.className = 'comment-item';
                 const avatar = comment.author_avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(comment.author_name || comment.user_id || 'guest')}`;
                 const isCommentAdmin = String(comment.author_role || '').toLowerCase() === 'admin';
+                const commentRankUser = {
+                    role: comment.author_role,
+                    xp: comment.author_xp,
+                    rank: comment.author_rank,
+                    rank_manual: comment.author_rank_manual
+                };
                 item.innerHTML = `
                     <span class="comment-avatar-wrap ${isCommentAdmin ? 'admin-avatar' : ''}">
                         <img class="comment-avatar" src="${HluvUI.escapeHtml(avatar)}" alt="">
@@ -154,7 +160,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </span>
                     <div class="comment-body">
                         <div class="comment-head">
-                            <strong>${HluvUI.escapeHtml(comment.author_name || 'Người dùng')}</strong>
+                            <div class="comment-author">
+                                <strong>${HluvUI.escapeHtml(comment.author_name || 'Người dùng')}</strong>
+                                ${HluvUI.rankBadgeMarkup(commentRankUser, 'rank-comment')}
+                            </div>
                             <small>${HluvUI.formatDate(comment.created_at)}</small>
                         </div>
                         <p>${HluvUI.escapeHtml(comment.content || '')}</p>
@@ -253,6 +262,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         HluvUI.setButtonLoading(els.bookmarkBtn, true);
         try {
             const result = await HluvApi.bookmarks.toggle(currentUser.id, postId);
+            if (result.added) {
+                const freshUser = await HluvUserService.profile(currentUser.id);
+                HluvUI.setCurrentUser(freshUser);
+            }
             HluvUI.notify(result.added ? HLUV_MESSAGES.bookmarkAdded : HLUV_MESSAGES.bookmarkRemoved, 'success');
             await refreshBookmarkButton();
         } catch (error) {
@@ -271,6 +284,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         HluvUI.setButtonLoading(els.likeBtn, true);
         try {
             const result = await HluvApi.likes.toggle(currentUser.id, postId);
+            if (result.liked) {
+                const freshUser = await HluvUserService.profile(currentUser.id);
+                HluvUI.setCurrentUser(freshUser);
+            }
             els.likeBtn.textContent = result.liked ? 'Đã thích' : 'Thích';
             await refreshLikeButton();
         } catch (error) {
@@ -295,11 +312,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         HluvUI.notify('Đã sao chép liên kết bài viết.', 'success');
     }
 
-    function markRead() {
+    async function markRead() {
         const key = HLUV_CONFIG.storageKeys.readProgress;
         const progress = JSON.parse(localStorage.getItem(key) || '{}');
-        progress[postId] = { readAt: new Date().toISOString(), title: article?.title || '' };
+        const isNewRead = !progress[postId];
+        progress[postId] = { readAt: new Date().toISOString(), title: article?.title || '', category: article?.category || '' };
         localStorage.setItem(key, JSON.stringify(progress));
+        if (currentUser && isNewRead) {
+            const data = await HluvUserService.addXp(currentUser.id, 2);
+            if (data?.user) HluvUI.setCurrentUser(data.user);
+        }
     }
 
     if (!postId) {
@@ -316,7 +338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         article = await HluvApi.posts.get(postId);
         renderArticle(article);
-        markRead();
+        await markRead();
         await Promise.all([renderRelated(article.category), refreshBookmarkButton(), refreshLikeButton(), renderComments()]);
     } catch (error) {
         els.title.textContent = 'Bài viết không tìm thấy';

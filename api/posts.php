@@ -22,6 +22,32 @@ function isAdminUser(mysqli $mysqli, int $userId): bool {
     return ($user['role'] ?? '') === 'admin' || strtolower($user['email'] ?? '') === 'admin@webtapchi.local';
 }
 
+function rankFromXp(int $xp): string {
+    if ($xp < 20) return 'Bần Nông';
+    if ($xp < 50) return 'Thường Dân';
+    if ($xp < 100) return 'Học Sĩ';
+    if ($xp < 200) return 'Quý Tộc';
+    return 'Vương Giả';
+}
+
+function addUserXp(mysqli $mysqli, int $userId, int $amount): void {
+    if ($amount <= 0) return;
+    $stmt = $mysqli->prepare('SELECT role,xp,rank,rank_manual FROM users WHERE id=? LIMIT 1');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows !== 1) return;
+
+    $user = $res->fetch_assoc();
+    if (($user['role'] ?? '') === 'admin') return;
+    $xp = max(0, intval($user['xp'] ?? 0) + $amount);
+    $rank = intval($user['rank_manual'] ?? 0) ? ($user['rank'] ?: 'Bần Nông') : rankFromXp($xp);
+
+    $upd = $mysqli->prepare('UPDATE users SET xp=?, rank=?, updated_at=NOW() WHERE id=?');
+    $upd->bind_param('isi', $xp, $rank, $userId);
+    $upd->execute();
+}
+
 if ($action === 'list' && $method === 'GET') {
     $q = trim($_GET['q'] ?? '');
     $cat = trim($_GET['category'] ?? '');
@@ -101,6 +127,7 @@ if ($action === 'create' && $method === 'POST') {
     $stmt = $mysqli->prepare('INSERT INTO posts (user_id,title,category,content,excerpt,image_url,status) VALUES (?,?,?,?,?,?,"published")');
     $stmt->bind_param('isssss', $userId, $title, $category, $content, $excerpt, $imageUrl);
     $stmt->execute();
+    addUserXp($mysqli, $userId, 10);
     jsonResult(['success' => true, 'id' => $stmt->insert_id]);
 }
 

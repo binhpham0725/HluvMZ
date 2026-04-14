@@ -18,6 +18,7 @@
                     <img src="${HluvHelpers.escapeHtml(avatar)}" alt="${HluvHelpers.escapeHtml(user.name || 'Avatar')}" onerror="this.src='${HLUV_CONFIG.defaultAvatar}'">
                     ${isAdmin ? '<span class="admin-badge">admin</span>' : ''}
                 </span>
+                ${isAdmin ? '' : HluvHelpers.rankBadgeMarkup(user, 'rank-header')}
                 <span class="user-name">${HluvHelpers.escapeHtml(user.name || user.email || 'Người dùng')}</span>
             </button>
         `;
