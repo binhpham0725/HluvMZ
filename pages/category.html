@@ -10,13 +10,20 @@
 <body>
     <header class="site-header" id="site-header"></header>
     <main class="container">
-        <div class="section-heading">
-            <div>
-                <p class="story-meta">Tin tức</p>
-                <h1 id="category-title">Danh mục</h1>
+        <section class="panel p-4">
+            <div class="section-heading">
+                <div>
+                    <p class="story-meta">Tin tức</p>
+                    <h1 id="category-title">Tất cả tin tức</h1>
+                    <p style="color:var(--muted);margin:0;">Trang này dùng để lọc, tra cứu và đọc toàn bộ bài viết theo chuyên mục.</p>
+                </div>
+                <p id="category-count"></p>
             </div>
-            <p id="category-count"></p>
-        </div>
+            <div class="category-toolbar">
+                <div id="category-tabs" class="filters"></div>
+                <input id="category-search" type="search" placeholder="Tìm trong tin tức..." />
+            </div>
+        </section>
         <div id="articles" class="story-grid"></div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

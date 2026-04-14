@@ -19,19 +19,28 @@
                 <p class="story-meta">Magazine Online</p>
                 <h1>Website Tạp Chí Đại học Hoa Lư - Công nghệ, Đời sống, Học tập, Giải trí</h1>
                 <p>Chào mừng bạn đến với nền tảng tin tức học thuật và phong cách sống dành cho sinh viên ĐH Hoa Lư.</p>
+                <div class="hero-actions">
+                    <a class="btn primary" href="magazine.html">Đọc bản Magazine</a>
+                    <a class="btn secondary" href="category.html?id=0">Xem tin tức</a>
+                </div>
             </div>
-            <aside class="right-aside p-3">
-                <h3>Chuyên mục nổi bật</h3>
-                <div class="featured-cats" id="featured-cats"></div>
+            <aside class="right-aside p-3 home-digest">
+                <p class="story-meta">Tổng quan</p>
+                <h3>Điểm nhanh hôm nay</h3>
+                <div class="home-metrics">
+                    <div><strong id="home-post-count">0</strong><span>Bài viết</span></div>
+                    <div><strong id="home-category-count">5</strong><span>Chuyên mục</span></div>
+                </div>
+                <a class="chip" href="search.html">Tìm bài viết</a>
             </aside>
         </section>
         <section id="news" class="section">
             <div class="section-heading">
                 <div>
-                    <p class="story-meta">Cập nhật liên tục</p>
-                    <h2>Bài viết mới nhất</h2>
+                    <p class="story-meta">Mới trên trang chủ</p>
+                    <h2>3 bài mới nhất</h2>
                 </div>
-                <button class="chip" id="load-more">Xem thêm</button>
+                <a class="chip" href="category.html?id=0">Xem tất cả</a>
             </div>
             <div id="articles" class="story-grid"></div>
         </section>

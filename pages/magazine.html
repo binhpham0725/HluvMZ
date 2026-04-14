@@ -18,29 +18,31 @@
             <div class="hero-left">
                 <p class="story-meta">Magazine Online</p>
                 <h1>Tạp chí Đại học Hoa Lư</h1>
-                <p>Đón đọc tin tức, bài học, kỹ năng và giải trí, cập nhật mỗi ngày. Hệ thống hỗ trợ chế độ sáng/tối, tìm kiếm, bookmark và trình duyệt thân thiện.</p>
-                <div class="filters" id="category-filters"></div>
+                <p>Ấn phẩm dạng magazine: một bài cover nổi bật, các lựa chọn của ban biên tập và từng cụm chuyên mục để đọc như một số báo online.</p>
             </div>
             <aside class="right-aside p-3">
-                <h3>Top chủ đề</h3>
-                <ul style="margin:0;padding-left:1rem;color:var(--muted);">
-                    <li>Công nghệ</li>
-                    <li>Đời sống</li>
-                    <li>Học tập</li>
-                    <li>Giải trí</li>
-                    <li>Sự kiện</li>
-                </ul>
+                <p class="story-meta">Editor's Picks</p>
+                <h3>Ban biên tập chọn</h3>
+                <div id="editor-picks" class="editor-picks"></div>
             </aside>
         </section>
         <section class="section">
             <div class="section-heading">
                 <div>
-                    <p class="story-meta">Tin mới</p>
-                    <h2>Bài viết mới nhất</h2>
+                    <p class="story-meta">Cover Story</p>
+                    <h2>Bài nổi bật trong số này</h2>
                 </div>
-                <button class="chip" id="load-more">Xem thêm</button>
             </div>
-            <div id="articles" class="story-grid"></div>
+            <div id="magazine-cover" class="magazine-cover"></div>
+        </section>
+        <section class="section">
+            <div class="section-heading">
+                <div>
+                    <p class="story-meta">Theo chuyên mục</p>
+                    <h2>Các lát cắt nội dung</h2>
+                </div>
+            </div>
+            <div id="magazine-sections" class="magazine-sections"></div>
         </section>
     </main>
     <button id="back-top">↑</button>

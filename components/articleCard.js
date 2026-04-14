@@ -6,6 +6,7 @@
     function render(post, options = {}) {
         const card = document.createElement('article');
         card.className = options.className || 'story-card';
+        card.dataset.id = post.id || post.post_id || '';
         card.tabIndex = 0;
         card.innerHTML = `
             <img src="${HluvHelpers.escapeHtml(imageSrc(post))}" alt="${HluvHelpers.escapeHtml(post.title)}" onerror="this.src='${HluvHelpers.escapeHtml(HLUV_CONFIG.placeholderImage)}'">
