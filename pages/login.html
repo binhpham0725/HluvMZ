@@ -23,7 +23,7 @@
         </form>
         <form id="register-form" style="display:none;">
             <label for="name-register">Họ và tên</label>
-            <input id="name-register" type="text" required />
+            <input id="name-register" type="text" maxlength="12" pattern="[\p{L}\p{N}\s]{1,12}" title="Tối đa 12 ký tự, không dùng ký tự đặc biệt" required />
             <label for="email-register">Email</label>
             <input id="email-register" type="email" required />
             <label for="gender-register">Giới tính</label>

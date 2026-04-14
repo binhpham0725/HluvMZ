@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirm = document.getElementById('confirm-password-register').value.trim();
 
         if (!HluvUI.validateRequired([name, email, gender, birthdate, password, confirm])) return HluvUI.notify(HLUV_MESSAGES.requiredFields, 'error');
+        if (!HluvUI.isAccountName(name)) return HluvUI.notify(HLUV_MESSAGES.invalidAccountName, 'error');
         if (!HluvUI.isEmail(email)) return HluvUI.notify(HLUV_MESSAGES.invalidEmail, 'error');
         if (password !== confirm) return HluvUI.notify(HLUV_MESSAGES.passwordMismatch, 'error');
 

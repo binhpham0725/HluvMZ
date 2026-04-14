@@ -44,7 +44,7 @@
             <h2>Chỉnh sửa hồ sơ</h2>
             <form id="edit-profile-form">
                 <label for="edit-name">Tên hiển thị</label>
-                <input id="edit-name" type="text" required />
+                <input id="edit-name" type="text" maxlength="12" pattern="[\p{L}\p{N}\s]{1,12}" title="Tối đa 12 ký tự, không dùng ký tự đặc biệt" required />
                 <label for="edit-gender">Giới tính</label>
                 <select id="edit-gender">
                     <option value="">Chưa chọn</option>

@@ -89,6 +89,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             HluvUI.notify('Tên không được để trống.', 'error');
             return;
         }
+        if (!HluvUI.isAccountName(payload.name)) {
+            HluvUI.notify(HLUV_MESSAGES.invalidAccountName, 'error');
+            return;
+        }
 
         HluvUI.setButtonLoading(submitBtn, true, 'Đang lưu...');
         try {

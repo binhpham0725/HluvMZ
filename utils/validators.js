@@ -5,6 +5,9 @@
         },
         email(value) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+        },
+        accountName(value) {
+            return /^[\p{L}\p{N}\s]{1,12}$/u.test(String(value || '').trim());
         }
     };
 })();

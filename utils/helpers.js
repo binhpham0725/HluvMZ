@@ -146,6 +146,7 @@
         handleError,
         validateRequired: (values) => HluvValidators.required(values),
         isEmail: (value) => HluvValidators.email(value),
+        isAccountName: (value) => HluvValidators.accountName(value),
         applyTheme,
         imageFileToDataUrl
     };

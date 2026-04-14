@@ -25,6 +25,10 @@ function normalizeBirthdate(?string $birthdate): ?string {
     return $date && $date->format('Y-m-d') === $birthdate ? $birthdate : null;
 }
 
+function isValidAccountName(string $name): bool {
+    return preg_match('/^[\p{L}\p{N}\s]{1,12}$/u', $name) === 1;
+}
+
 function passwordMatches(mysqli $mysqli, int $id, string $password): bool {
     $stmt = $mysqli->prepare('SELECT password FROM users WHERE id=? LIMIT 1');
     $stmt->bind_param('i', $id);
@@ -48,6 +52,7 @@ if ($action === 'register' && $method === 'POST') {
     $birthdate = normalizeBirthdate($body['birthdate'] ?? '');
 
     if (!$name || !$email || !$password) jsonResult(['error' => 'Yêu cầu name/email/password'], 400);
+    if (!isValidAccountName($name)) jsonResult(['error' => 'Tên tài khoản tối đa 12 ký tự và không dùng ký tự đặc biệt'], 400);
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) jsonResult(['error' => 'Email không hợp lệ'], 400);
     if (isset($body['gender']) && trim((string) $body['gender']) !== '' && !$gender) jsonResult(['error' => 'Giới tính không hợp lệ'], 400);
     if (isset($body['birthdate']) && trim((string) $body['birthdate']) !== '' && !$birthdate) jsonResult(['error' => 'Ngày sinh không hợp lệ'], 400);
@@ -109,6 +114,7 @@ if ($action === 'update' && $method === 'PUT') {
     $gender = normalizeGender($body['gender'] ?? '');
     $birthdate = normalizeBirthdate($body['birthdate'] ?? '');
     if (!$id || !$name) jsonResult(['error' => 'id/name required'], 400);
+    if (!isValidAccountName($name)) jsonResult(['error' => 'Tên tài khoản tối đa 12 ký tự và không dùng ký tự đặc biệt'], 400);
     if (isset($body['gender']) && trim((string) $body['gender']) !== '' && !$gender) jsonResult(['error' => 'Giới tính không hợp lệ'], 400);
     if (isset($body['birthdate']) && trim((string) $body['birthdate']) !== '' && !$birthdate) jsonResult(['error' => 'Ngày sinh không hợp lệ'], 400);
 

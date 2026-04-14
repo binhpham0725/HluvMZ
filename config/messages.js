@@ -12,6 +12,7 @@
         registerFailed: 'Đăng ký thất bại.',
         requiredFields: 'Vui lòng nhập đầy đủ thông tin.',
         invalidEmail: 'Email chưa đúng định dạng.',
+        invalidAccountName: 'Tên tài khoản tối đa 12 ký tự và không dùng ký tự đặc biệt.',
         passwordMismatch: 'Mật khẩu xác nhận không khớp.',
         createPostSuccess: 'Đăng bài thành công.',
         updatePostSuccess: 'Cập nhật bài viết thành công.',
