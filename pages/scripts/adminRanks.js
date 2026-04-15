@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const admin = HluvUI.getCurrentUser();
     const list = document.getElementById('rank-admin-list');
-    const rankOptions = ['auto', 'Vô Gia Cư', 'Bần Nông', 'Thường Dân', 'Học Sĩ', 'Quý Tộc', 'Vương Giả'];
+    const rankOptions = ['auto', 'Lọ Vương', 'Vô Gia Cư', 'Bần Nông', 'Thường Dân', 'Học Sĩ', 'Quý Tộc', 'Vương Giả'];
     const rankHints = {
+        'Lọ Vương': 'cấp admin đặt riêng',
         'Vô Gia Cư': 'ngoài hệ thống',
         'Bần Nông': 'Level 1 · <20 XP',
         'Thường Dân': 'Level 2 · 20+ XP',

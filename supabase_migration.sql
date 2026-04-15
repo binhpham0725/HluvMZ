@@ -208,7 +208,7 @@ begin
     raise exception 'Cannot update admin rank' using errcode = '42501';
   end if;
 
-  if p_rank not in ('Vô Gia Cư', 'Bần Nông', 'Thường Dân', 'Học Sĩ', 'Quý Tộc', 'Vương Giả') then
+  if p_rank not in ('Vô Gia Cư', 'Lọ Vương', 'Bần Nông', 'Thường Dân', 'Học Sĩ', 'Quý Tộc', 'Vương Giả') then
     raise exception 'Rank invalid' using errcode = '22023';
   end if;
 

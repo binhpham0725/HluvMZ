@@ -11,6 +11,7 @@
     const publicUserFields = 'id,name,email,avatar,gender,birthdate,bio,role,xp,rank,rank_manual,created_at,updated_at';
     const rankCatalog = {
         'Vô Gia Cư': { icon: '👩‍🦽', min_xp: 0 },
+        'Lọ Vương': { icon: '👑', min_xp: 0 },
         'Bần Nông': { icon: '🌱', min_xp: 0 },
         'Thường Dân': { icon: '🧑‍🌾', min_xp: 20 },
         'Học Sĩ': { icon: '🎓', min_xp: 50 },

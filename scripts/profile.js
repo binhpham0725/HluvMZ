@@ -142,9 +142,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isAdmin) return;
 
         const xp = Number(user.xp || 0);
-        const nextMap = { 'Bần Nông': 20, 'Thường Dân': 50, 'Học Sĩ': 100, 'Quý Tộc': 200, 'Vương Giả': 200, 'Vô Gia Cư': 20 };
+        const nextMap = { 'Bần Nông': 20, 'Thường Dân': 50, 'Học Sĩ': 100, 'Quý Tộc': 200, 'Vương Giả': 200, 'Vô Gia Cư': 20, 'Lọ Vương': 200 };
         const next = nextMap[rankInfo.label] || 20;
-        const pct = rankInfo.label === 'Vương Giả' ? 100 : Math.min(100, Math.round((xp / next) * 100));
+        const pct = ['Vương Giả', 'Lọ Vương'].includes(rankInfo.label) ? 100 : Math.min(100, Math.round((xp / next) * 100));
         if (els.rankSummary) els.rankSummary.innerHTML = `${HluvUI.escapeHtml(rankInfo.icon)} ${HluvUI.escapeHtml(rankInfo.label)}`;
         if (els.rankProgressBar) els.rankProgressBar.style.width = `${pct}%`;
         if (els.rankProgressText) {

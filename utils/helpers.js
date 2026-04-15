@@ -68,6 +68,7 @@
 
     const ranks = {
         'Vô Gia Cư': { icon: '👩‍🦽', label: 'Vô Gia Cư', minXp: 0 },
+        'Lọ Vương': { icon: '👑', label: 'Lọ Vương', minXp: 0 },
         'Bần Nông': { icon: '🌱', label: 'Bần Nông', minXp: 0 },
         'Thường Dân': { icon: '🧑‍🌾', label: 'Thường Dân', minXp: 20 },
         'Học Sĩ': { icon: '🎓', label: 'Học Sĩ', minXp: 50 },

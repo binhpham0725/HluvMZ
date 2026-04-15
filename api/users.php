@@ -43,6 +43,7 @@ function passwordMatches(mysqli $mysqli, int $id, string $password): bool {
 function rankCatalog(): array {
     return [
         'Vô Gia Cư' => ['icon' => '👩‍🦽', 'min_xp' => 0],
+        'Lọ Vương' => ['icon' => '👑', 'min_xp' => 0],
         'Bần Nông' => ['icon' => '🌱', 'min_xp' => 0],
         'Thường Dân' => ['icon' => '🧑‍🌾', 'min_xp' => 20],
         'Học Sĩ' => ['icon' => '🎓', 'min_xp' => 50],
