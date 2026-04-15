@@ -31,11 +31,11 @@ if ($action === 'list' && $method === 'GET') {
     if (!$postId) jsonResult(['error' => 'post_id required'], 400);
 
     $stmt = $mysqli->prepare(
-        'SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.name AS author_name, u.avatar AS author_avatar, u.role AS author_role, u.xp AS author_xp, u.rank AS author_rank, u.rank_manual AS author_rank_manual
+        'SELECT c.id, c.post_id, c.user_id, c.parent_id, c.content, c.created_at, u.name AS author_name, u.avatar AS author_avatar, u.role AS author_role, u.xp AS author_xp, u.rank AS author_rank, u.rank_manual AS author_rank_manual
          FROM comments c
          JOIN users u ON c.user_id = u.id
          WHERE c.post_id=?
-         ORDER BY c.created_at DESC, c.id DESC'
+         ORDER BY c.created_at ASC, c.id ASC'
     );
     $stmt->bind_param('i', $postId);
     $stmt->execute();
@@ -48,6 +48,7 @@ if ($action === 'create' && $method === 'POST') {
 
     $postId = intval($body['post_id'] ?? 0);
     $userId = intval($body['user_id'] ?? 0);
+    $parentId = intval($body['parent_id'] ?? 0);
     $content = trim($body['content'] ?? '');
 
     if (!$postId || !$userId || !$content) jsonResult(['error' => 'post_id/user_id/content required'], 400);
@@ -56,9 +57,17 @@ if ($action === 'create' && $method === 'POST') {
     }
     if (!entityExists($mysqli, 'posts', $postId)) jsonResult(['error' => 'Post not found'], 404);
     if (!entityExists($mysqli, 'users', $userId)) jsonResult(['error' => 'User not found'], 404);
+    if ($parentId) {
+        $stmt = $mysqli->prepare('SELECT id FROM comments WHERE id=? AND post_id=? LIMIT 1');
+        $stmt->bind_param('ii', $parentId, $postId);
+        $stmt->execute();
+        $stmt->store_result();
+        if ($stmt->num_rows !== 1) jsonResult(['error' => 'Parent comment not found'], 404);
+    }
 
-    $stmt = $mysqli->prepare('INSERT INTO comments (post_id,user_id,content) VALUES (?,?,?)');
-    $stmt->bind_param('iis', $postId, $userId, $content);
+    $parentValue = $parentId ?: null;
+    $stmt = $mysqli->prepare('INSERT INTO comments (post_id,user_id,parent_id,content) VALUES (?,?,?,?)');
+    $stmt->bind_param('iiis', $postId, $userId, $parentValue, $content);
     $stmt->execute();
 
     jsonResult(['success' => true, 'id' => $stmt->insert_id]);
@@ -69,7 +78,20 @@ if ($action === 'delete' && $method === 'DELETE') {
     $userId = intval($_GET['user_id'] ?? 0);
     if (!$id || !$userId) jsonResult(['error' => 'id/user_id required'], 400);
 
-    if (isAdminUser($mysqli, $userId)) {
+    $isAdmin = isAdminUser($mysqli, $userId);
+    if (!$isAdmin) {
+        $ownStmt = $mysqli->prepare('SELECT id FROM comments WHERE id=? AND user_id=? LIMIT 1');
+        $ownStmt->bind_param('ii', $id, $userId);
+        $ownStmt->execute();
+        $ownStmt->store_result();
+        if ($ownStmt->num_rows !== 1) jsonResult(['error' => 'Forbidden'], 403);
+    }
+
+    $replyStmt = $mysqli->prepare('DELETE FROM comments WHERE parent_id=?');
+    $replyStmt->bind_param('i', $id);
+    $replyStmt->execute();
+
+    if ($isAdmin) {
         $stmt = $mysqli->prepare('DELETE FROM comments WHERE id=?');
         $stmt->bind_param('i', $id);
     } else {

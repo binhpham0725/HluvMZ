@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     let article = null;
+    let replyTarget = null;
 
     function canManagePost(post) {
         return Boolean(currentUser && post && (
@@ -119,15 +120,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function syncCommentForm() {
         if (!els.commentForm || !els.commentContent) return;
+        let replyNotice = document.getElementById('reply-notice');
+        if (!replyNotice && currentUser) {
+            replyNotice = document.createElement('div');
+            replyNotice.id = 'reply-notice';
+            replyNotice.className = 'reply-notice';
+            els.commentForm.insertAdjacentElement('afterbegin', replyNotice);
+        }
         if (currentUser) {
             els.commentContent.disabled = false;
-            els.commentContent.placeholder = 'Viết bình luận của bạn...';
+            els.commentContent.placeholder = replyTarget ? `Trả lời ${replyTarget.author_name || 'bình luận'}...` : 'Viết bình luận của bạn...';
             els.commentForm.querySelector('button[type="submit"]').disabled = false;
+            if (replyNotice) {
+                replyNotice.hidden = !replyTarget;
+                replyNotice.innerHTML = replyTarget ? `
+                    <span>Đang trả lời <strong>${HluvUI.escapeHtml(replyTarget.author_name || 'Người dùng')}</strong></span>
+                    <button type="button" class="reply-cancel">Hủy</button>
+                ` : '';
+                replyNotice.querySelector('.reply-cancel')?.addEventListener('click', () => {
+                    replyTarget = null;
+                    syncCommentForm();
+                });
+            }
             return;
         }
         els.commentContent.disabled = true;
         els.commentContent.placeholder = 'Đăng nhập để bình luận.';
         els.commentForm.querySelector('button[type="submit"]').disabled = true;
+        replyNotice?.remove();
+    }
+
+    function setReplyTarget(comment) {
+        replyTarget = comment;
+        syncCommentForm();
+        els.commentContent?.focus();
+        els.commentForm?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     async function renderComments() {
@@ -142,9 +169,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            const commentsByParent = new Map();
+            const commentIds = new Set(comments.map((comment) => Number(comment.id)));
             comments.forEach((comment) => {
+                const parentId = Number(comment.parent_id || 0);
+                const key = parentId && commentIds.has(parentId) ? parentId : 0;
+                if (!commentsByParent.has(key)) commentsByParent.set(key, []);
+                commentsByParent.get(key).push(comment);
+            });
+
+            function renderComment(comment, level = 0) {
                 const item = document.createElement('div');
-                item.className = 'comment-item';
+                item.className = level ? 'comment-item comment-reply' : 'comment-item';
                 const avatar = comment.author_avatar || `${HLUV_CONFIG.defaultAvatar}?u=${encodeURIComponent(comment.author_name || comment.user_id || 'guest')}`;
                 const isCommentAdmin = String(comment.author_role || '').toLowerCase() === 'admin';
                 const commentRankUser = {
@@ -169,9 +205,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p>${HluvUI.escapeHtml(comment.content || '')}</p>
                     </div>
                 `;
+                const tools = document.createElement('div');
+                tools.className = 'comment-tools';
+                if (currentUser) {
+                    const replyBtn = document.createElement('button');
+                    replyBtn.type = 'button';
+                    replyBtn.className = 'btn btn-small btn-reply';
+                    replyBtn.textContent = 'Trả lời';
+                    replyBtn.addEventListener('click', () => setReplyTarget(comment));
+                    tools.appendChild(replyBtn);
+                }
                 if (canManageComment(comment)) {
-                    const tools = document.createElement('div');
-                    tools.className = 'comment-tools';
                     const deleteBtn = document.createElement('button');
                     deleteBtn.type = 'button';
                     deleteBtn.className = 'btn btn-small btn-delete';
@@ -191,9 +235,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     });
                     tools.appendChild(deleteBtn);
-                    item.querySelector('.comment-body').appendChild(tools);
                 }
-                els.commentList.appendChild(item);
+                if (tools.children.length) item.querySelector('.comment-body').appendChild(tools);
+
+                const replies = commentsByParent.get(Number(comment.id)) || [];
+                if (replies.length) {
+                    const replyList = document.createElement('div');
+                    replyList.className = 'comment-replies';
+                    replies.forEach((reply) => replyList.appendChild(renderComment(reply, level + 1)));
+                    item.querySelector('.comment-body').appendChild(replyList);
+                }
+
+                return item;
+            }
+
+            (commentsByParent.get(0) || []).forEach((comment) => {
+                els.commentList.appendChild(renderComment(comment));
             });
         } catch (error) {
             HluvUI.renderState(els.commentList, 'Không tải được bình luận.', 'error');
@@ -215,9 +272,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const submitBtn = els.commentForm.querySelector('button[type="submit"]');
         HluvUI.setButtonLoading(submitBtn, true, 'Đang gửi...');
         try {
-            await HluvApi.comments.create({ post_id: postId, user_id: currentUser.id, content });
+            const result = await HluvApi.comments.create({ post_id: postId, user_id: currentUser.id, content, parent_id: replyTarget?.id });
             els.commentContent.value = '';
-            HluvUI.notify(HLUV_MESSAGES.commentCreateSuccess, 'success');
+            replyTarget = null;
+            syncCommentForm();
+            HluvUI.notify(result?.degradedReply ? 'Đã gửi trả lời. Chạy migration parent_id để hiển thị dạng luồng.' : HLUV_MESSAGES.commentCreateSuccess, 'success');
             await renderComments();
         } catch (error) {
             HluvUI.handleError(error, HLUV_MESSAGES.commentCreateFailed);

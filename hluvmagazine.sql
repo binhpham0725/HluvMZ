@@ -52,6 +52,7 @@ CREATE TABLE `comments` (
   `id` int(10) UNSIGNED NOT NULL,
   `post_id` int(10) UNSIGNED NOT NULL,
   `user_id` int(10) UNSIGNED NOT NULL,
+  `parent_id` int(10) UNSIGNED DEFAULT NULL,
   `content` text NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -60,8 +61,8 @@ CREATE TABLE `comments` (
 -- Dumping data for table `comments`
 --
 
-INSERT INTO `comments` (`id`, `post_id`, `user_id`, `content`, `created_at`) VALUES
-(5, 23, 3, 'hê lô', '2026-04-14 09:12:01');
+INSERT INTO `comments` (`id`, `post_id`, `user_id`, `parent_id`, `content`, `created_at`) VALUES
+(5, 23, 3, NULL, 'hê lô', '2026-04-14 09:12:01');
 
 -- --------------------------------------------------------
 
@@ -226,6 +227,7 @@ ALTER TABLE `users`
 ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `xp` int(11) NOT NULL DEFAULT 0;
 ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `rank` varchar(50) NOT NULL DEFAULT 'Bần Nông';
 ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `rank_manual` tinyint(1) NOT NULL DEFAULT 0;
+ALTER TABLE `comments` ADD COLUMN IF NOT EXISTS `parent_id` int(10) UNSIGNED DEFAULT NULL;
 
 --
 -- Constraints for dumped tables
@@ -243,7 +245,8 @@ ALTER TABLE `bookmarks`
 --
 ALTER TABLE `comments`
   ADD CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `comments_ibfk_3` FOREIGN KEY (`parent_id`) REFERENCES `comments` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `likes`

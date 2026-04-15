@@ -85,7 +85,11 @@
 
     function setAuthSession(session) {
         if (!session?.access_token) return;
-        localStorage.setItem(authSessionKey(), JSON.stringify(session));
+        const normalized = { ...session };
+        if (normalized.expires_in && !normalized.expires_at) {
+            normalized.expires_at = Math.floor(Date.now() / 1000) + Number(normalized.expires_in);
+        }
+        localStorage.setItem(authSessionKey(), JSON.stringify(normalized));
     }
 
     function getAuthSession() {
@@ -100,6 +104,61 @@
         localStorage.removeItem(authSessionKey());
     }
 
+    function isJwtExpiredPayload(data) {
+        const text = `${data?.message || ''} ${data?.msg || ''} ${data?.error || ''} ${data?.code || ''}`.toLowerCase();
+        return text.includes('jwt expired') || text.includes('token is expired');
+    }
+
+    function isMissingColumnError(error, column) {
+        const text = `${error?.message || ''} ${error?.details?.message || ''} ${error?.details?.details || ''} ${error?.details?.hint || ''}`.toLowerCase();
+        return text.includes(column.toLowerCase()) && (text.includes('column') || text.includes('schema cache'));
+    }
+
+    async function refreshAuthSession() {
+        const session = getAuthSession();
+        if (!session?.refresh_token) throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
+
+        const config = supabaseConfig();
+        let response;
+        try {
+            response = await fetch(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
+                method: 'POST',
+                headers: {
+                    apikey: config.key,
+                    Authorization: `Bearer ${config.key}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ refresh_token: session.refresh_token })
+            });
+        } catch (error) {
+            throw new ApiError(HLUV_MESSAGES.networkError, 0, error);
+        }
+
+        const data = await parseJsonResponse(response);
+        if (!response.ok || !data?.access_token) {
+            clearAuthSession();
+            throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', response.status, data);
+        }
+
+        setAuthSession(data);
+        return data;
+    }
+
+    async function getSupabaseAccessToken(options = {}) {
+        if (options.accessToken) return options.accessToken;
+        const config = supabaseConfig();
+        const session = getAuthSession();
+        if (!session?.access_token) return config.key;
+
+        const now = Math.floor(Date.now() / 1000);
+        if (session.refresh_token && Number(session.expires_at || 0) && Number(session.expires_at) <= now + 90) {
+            const fresh = await refreshAuthSession();
+            return fresh.access_token;
+        }
+
+        return session.access_token;
+    }
+
     async function parseJsonResponse(response) {
         const text = await response.text();
         if (!text) return null;
@@ -110,10 +169,9 @@
         }
     }
 
-    async function supabaseRest(path, options = {}) {
+    async function supabaseRest(path, options = {}, allowRefreshRetry = true) {
         const config = supabaseConfig();
-        const session = getAuthSession();
-        const token = options.accessToken || session?.access_token || config.key;
+        const token = await getSupabaseAccessToken(options);
         const url = new URL(`${config.url}/rest/v1/${path}`);
         Object.entries(options.params || {}).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
@@ -142,6 +200,14 @@
 
         const data = await parseJsonResponse(response);
         if (!response.ok) {
+            if (allowRefreshRetry && isJwtExpiredPayload(data)) {
+                await refreshAuthSession();
+                return supabaseRest(path, options, false);
+            }
+            const rlsText = `${data?.message || ''} ${data?.error || ''}`.toLowerCase();
+            if (rlsText.includes('row-level security')) {
+                throw new ApiError('Supabase RLS đang chặn thao tác. Hãy chạy file supabase_migration.sql trong SQL Editor rồi thử lại.', response.status, data);
+            }
             throw new ApiError(data?.message || data?.error || `Lỗi Supabase (${response.status}).`, response.status, data);
         }
         return data;
@@ -620,13 +686,14 @@
 
     async function listComments(postId) {
         const comments = await supabaseRest('comments', {
-            params: { select: '*', post_id: `eq.${Number(postId)}`, order: 'created_at.desc,id.desc' }
+            params: { select: '*', post_id: `eq.${Number(postId)}`, order: 'created_at.asc,id.asc' }
         });
         const usersById = await fetchUsersByIds(comments.map((comment) => comment.user_id));
         return comments.map((comment) => {
             const user = usersById.get(Number(comment.user_id));
             return {
                 ...comment,
+                parent_id: Number(comment.parent_id || 0) || null,
                 author_name: user?.name || 'Người dùng',
                 author_avatar: user?.avatar || '',
                 author_role: user?.role || 'reader',
@@ -637,10 +704,57 @@
         });
     }
 
+    async function createComment(payload = {}) {
+        const parentId = Number(payload.parent_id || 0);
+        const body = {
+            post_id: Number(payload.post_id),
+            user_id: Number(payload.user_id),
+            content: String(payload.content || '').trim()
+        };
+        if (parentId) body.parent_id = parentId;
+
+        try {
+            const rows = await supabaseRest('comments', {
+                method: 'POST',
+                body,
+                prefer: 'return=representation'
+            });
+            return { success: true, id: rows?.[0]?.id, comment: rows?.[0] };
+        } catch (error) {
+            if (!parentId || !isMissingColumnError(error, 'parent_id')) throw error;
+
+            const fallbackBody = {
+                post_id: body.post_id,
+                user_id: body.user_id,
+                content: `Trả lời bình luận #${parentId}:\n${body.content}`
+            };
+            const rows = await supabaseRest('comments', {
+                method: 'POST',
+                body: fallbackBody,
+                prefer: 'return=representation'
+            });
+            return { success: true, id: rows?.[0]?.id, comment: rows?.[0], degradedReply: true };
+        }
+    }
+
     async function deleteComment(id, userId) {
         const user = await fetchUserById(userId);
+        const targetRows = await supabaseRest('comments', {
+            params: { select: 'id,user_id', id: `eq.${Number(id)}`, limit: 1 }
+        });
+        const target = targetRows?.[0];
+        if (!target) throw new ApiError('Comment not found', 404);
+        if (!isAdminUser(user) && Number(target.user_id) !== Number(userId)) throw new ApiError('Forbidden', 403);
+
         const params = { id: `eq.${Number(id)}` };
         if (!isAdminUser(user)) params.user_id = `eq.${Number(userId)}`;
+        await supabaseRest('comments', {
+            method: 'DELETE',
+            params: { parent_id: `eq.${Number(id)}` },
+            prefer: 'return=minimal'
+        }).catch((error) => {
+            if (!isMissingColumnError(error, 'parent_id')) throw error;
+        });
         const rows = await supabaseRest('comments', {
             method: 'DELETE',
             params,
@@ -755,18 +869,7 @@
         }
         if (endpoint === 'comments.php') {
             if (action === 'list') return listComments(params.post_id);
-            if (action === 'create') {
-                const rows = await supabaseRest('comments', {
-                    method: 'POST',
-                    body: {
-                        post_id: Number(options.body?.post_id),
-                        user_id: Number(options.body?.user_id),
-                        content: String(options.body?.content || '').trim()
-                    },
-                    prefer: 'return=representation'
-                });
-                return { success: true, id: rows?.[0]?.id };
-            }
+            if (action === 'create') return createComment(options.body || {});
             if (action === 'delete') return deleteComment(params.id, params.user_id);
         }
         throw new ApiError('Action not found', 404, { endpoint, action });
