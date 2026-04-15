@@ -327,7 +327,7 @@ form textarea{min-height:150px;resize:vertical}
     .rank-admin-row{grid-template-columns:52px 1fr;align-items:start}
     .rank-admin-meta,.rank-admin-form{grid-column:1/-1}
     .actions{align-items:flex-start!important;margin-top:.75rem}
-    .notification-panel{left:0;right:auto}
+    .notification-panel{position:fixed;left:50%;right:auto;top:84px;width:calc(100vw - 1.5rem);max-width:420px;max-height:calc(100dvh - 104px);transform:translateX(-50%);padding:.75rem;border-radius:18px}
     .profile-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
@@ -339,6 +339,11 @@ form textarea{min-height:150px;resize:vertical}
     .trending-grid{grid-template-columns:1fr}
     .rank-missions{grid-template-columns:1fr}
     .rank-admin-form{grid-template-columns:1fr}
+    .notification-panel{top:76px;width:calc(100vw - 1rem);max-height:calc(100dvh - 88px);padding:.65rem;border-radius:16px}
+    .notification-item{grid-template-columns:32px minmax(0,1fr);gap:.5rem;padding:.62rem;border-radius:14px}
+    .notification-icon{width:32px;height:32px;border-radius:12px}
+    .notification-item small{overflow-wrap:anywhere;word-break:break-word}
+    .admin-notify-form{padding:.65rem}
     .section-heading{align-items:flex-start;flex-direction:column}
     .search-box{flex-direction:column}
     .quick-search{grid-template-columns:1fr}
