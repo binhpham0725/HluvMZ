@@ -783,9 +783,13 @@
         const usersById = await fetchUsersByIds(comments.map((comment) => comment.user_id));
         return comments.map((comment) => {
             const user = usersById.get(Number(comment.user_id));
+            const content = String(comment.content || '');
+            const legacyReply = content.match(/^Trả lời bình luận #(\d+):\s*\n?([\s\S]*)$/);
+            const parentId = Number(comment.parent_id || legacyReply?.[1] || 0) || null;
             return {
                 ...comment,
-                parent_id: Number(comment.parent_id || 0) || null,
+                parent_id: parentId,
+                content: legacyReply ? legacyReply[2].trim() : comment.content,
                 author_name: user?.name || 'Người dùng',
                 author_avatar: user?.avatar || '',
                 author_role: user?.role || 'reader',

@@ -198,8 +198,15 @@ form textarea{min-height:150px;resize:vertical}
 .btn-reply{background:#eef4ff;color:var(--accent)}
 .reply-notice{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;padding:.65rem .85rem;border-radius:14px;background:rgba(43,108,238,.1);color:var(--accent);font-weight:850}
 .reply-cancel{border:0;background:transparent;color:var(--accent);font-weight:950;cursor:pointer}
-.comment-replies{display:grid;gap:.65rem;margin-top:.75rem;padding-left:1rem;border-left:2px solid rgba(43,108,238,.16)}
-.comment-reply{background:rgba(255,255,255,.55);border-color:rgba(43,108,238,.14)}
+.comment-replies{display:grid;gap:.48rem;margin-top:.75rem;margin-left:.25rem;padding-left:.9rem;border-left:2px solid rgba(43,108,238,.16)}
+.comment-reply{width:min(780px,100%);border-radius:14px;padding:.62rem .7rem;background:rgba(255,255,255,.58);border-color:rgba(43,108,238,.14);box-shadow:none}
+.comment-reply .comment-avatar{width:32px;height:32px}
+.comment-reply .comment-avatar-wrap .admin-badge{font-size:.46rem}
+.comment-reply .comment-head{margin-bottom:.12rem}
+.comment-reply .comment-head strong{font-size:.92rem}
+.comment-reply .rank-comment{font-size:.6rem;padding:.18rem .42rem}
+.comment-reply .comment-body p{font-size:.94rem;line-height:1.5}
+.comment-reply .comment-tools{justify-content:flex-start;margin-top:.45rem}
 .related{margin-top:2rem}
 .related-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
 .cardsmall{background:rgba(255,255,255,.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.3);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer}
