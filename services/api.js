@@ -310,8 +310,13 @@
 
     async function listNotifications(userId) {
         if (!userId) return [];
+        const derived = await deriveNotifications(userId).catch((error) => {
+            console.warn('Không dựng được thông báo từ hoạt động.', error);
+            return [];
+        });
+        let stored = [];
         try {
-            return await supabaseRest('notifications', {
+            stored = await supabaseRest('notifications', {
                 params: {
                     select: '*',
                     or: `(user_id.eq.${Number(userId)},user_id.is.null)`,
@@ -320,9 +325,141 @@
                 }
             });
         } catch (error) {
-            if (isMissingTableError(error, 'notifications')) return [];
-            throw error;
+            if (!isMissingTableError(error, 'notifications')) throw error;
         }
+
+        const seen = new Set();
+        return [...stored, ...derived]
+            .filter((item) => {
+                const key = `${item.type}-${item.post_id || 0}-${item.comment_id || 0}-${item.actor_id || 0}-${item.created_at || ''}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+            .slice(0, 30);
+    }
+
+    async function deriveNotifications(userId) {
+        const id = Number(userId);
+        const posts = await supabaseRest('posts', {
+            params: { select: 'id,title,user_id,status', user_id: `eq.${id}`, status: 'eq.published' }
+        }).catch(() => []);
+        const ownComments = await supabaseRest('comments', {
+            params: { select: '*', user_id: `eq.${id}`, order: 'created_at.desc,id.desc', limit: 120 }
+        }).catch(() => []);
+
+        const postIds = uniq(posts.map((post) => post.id));
+        const ownCommentIds = uniq(ownComments.map((comment) => comment.id));
+        const postById = new Map(posts.map((post) => [Number(post.id), post]));
+        const notifications = [];
+
+        let commentsOnPosts = [];
+        if (postIds.length) {
+            commentsOnPosts = await supabaseRest('comments', {
+                params: { select: '*', post_id: inFilter(postIds), order: 'created_at.desc,id.desc', limit: 120 }
+            }).catch(() => []);
+        }
+
+        let repliesToOwnComments = [];
+        if (ownCommentIds.length) {
+            repliesToOwnComments = await supabaseRest('comments', {
+                params: { select: '*', parent_id: inFilter(ownCommentIds), order: 'created_at.desc,id.desc', limit: 120 }
+            }).catch(async (error) => {
+                if (!isMissingColumnError(error, 'parent_id')) return [];
+                const recent = await supabaseRest('comments', {
+                    params: { select: '*', order: 'created_at.desc,id.desc', limit: 160 }
+                }).catch(() => []);
+                return recent.filter((comment) => {
+                    const match = String(comment.content || '').match(/^Trả lời bình luận #(\d+):/);
+                    return match && ownCommentIds.includes(Number(match[1]));
+                });
+            });
+        }
+
+        let likesOnPosts = [];
+        if (postIds.length) {
+            likesOnPosts = await supabaseRest('likes', {
+                params: { select: '*', post_id: inFilter(postIds), order: 'created_at.desc,id.desc', limit: 120 }
+            }).catch(() => []);
+        }
+
+        const actorIds = uniq([
+            ...commentsOnPosts.map((item) => item.user_id),
+            ...repliesToOwnComments.map((item) => item.user_id),
+            ...likesOnPosts.map((item) => item.user_id)
+        ]);
+        const usersById = await fetchUsersByIds(actorIds);
+        const pushed = new Set();
+
+        commentsOnPosts.forEach((comment) => {
+            if (Number(comment.user_id) === id) return;
+            const post = postById.get(Number(comment.post_id));
+            const actor = usersById.get(Number(comment.user_id));
+            const actorName = actor?.name || actor?.email || 'Một người dùng';
+            const parentId = Number(comment.parent_id || String(comment.content || '').match(/^Trả lời bình luận #(\d+):/)?.[1] || 0);
+            const key = `post-comment-${comment.id}`;
+            if (pushed.has(key)) return;
+            pushed.add(key);
+            notifications.push({
+                id: `derived-${key}`,
+                user_id: id,
+                actor_id: comment.user_id,
+                actor_name: actorName,
+                type: parentId ? 'reply_on_post' : 'comment',
+                post_id: comment.post_id,
+                comment_id: comment.id,
+                parent_comment_id: parentId || null,
+                message: parentId
+                    ? `${actorName} đã trả lời một bình luận trong bài viết "${post?.title || 'không có tiêu đề'}".`
+                    : `${actorName} đã bình luận bài viết "${post?.title || 'không có tiêu đề'}".`,
+                is_read: false,
+                created_at: comment.created_at
+            });
+        });
+
+        repliesToOwnComments.forEach((comment) => {
+            if (Number(comment.user_id) === id) return;
+            const actor = usersById.get(Number(comment.user_id));
+            const actorName = actor?.name || actor?.email || 'Một người dùng';
+            const parentId = Number(comment.parent_id || String(comment.content || '').match(/^Trả lời bình luận #(\d+):/)?.[1] || 0);
+            const key = `reply-${comment.id}`;
+            if (pushed.has(key)) return;
+            pushed.add(key);
+            notifications.push({
+                id: `derived-${key}`,
+                user_id: id,
+                actor_id: comment.user_id,
+                actor_name: actorName,
+                type: 'reply',
+                post_id: comment.post_id,
+                comment_id: comment.id,
+                parent_comment_id: parentId || null,
+                message: `${actorName} đã trả lời bình luận của bạn.`,
+                is_read: false,
+                created_at: comment.created_at
+            });
+        });
+
+        likesOnPosts.forEach((like) => {
+            if (Number(like.user_id) === id) return;
+            const post = postById.get(Number(like.post_id));
+            const actor = usersById.get(Number(like.user_id));
+            const actorName = actor?.name || actor?.email || 'Một người dùng';
+            notifications.push({
+                id: `derived-like-${like.id || `${like.user_id}-${like.post_id}`}`,
+                user_id: id,
+                actor_id: like.user_id,
+                actor_name: actorName,
+                type: 'like',
+                post_id: like.post_id,
+                message: `${actorName} đã thích bài viết "${post?.title || 'không có tiêu đề'}".`,
+                is_read: false,
+                created_at: like.created_at
+            });
+        });
+
+        return notifications;
     }
 
     async function markNotificationsRead(userId) {
@@ -346,13 +483,15 @@
         if (!isAdminUser(admin)) throw new ApiError('Admin required', 403);
         const clean = String(message || '').trim();
         if (!clean) throw new ApiError('Vui lòng nhập nội dung thông báo.', 400);
-        return createNotification({
+        const result = await createNotification({
             user_id: null,
             actor_id: admin.id,
             actor_name: admin.name || admin.email || 'Admin',
             type: 'admin',
             message: clean
         });
+        if (!result?.success) throw new ApiError('Chưa gửi được thông báo. Hãy chạy supabase_migration.sql để tạo bảng notifications và policy.', 500, result);
+        return result;
     }
 
     async function fetchProfileById(id) {

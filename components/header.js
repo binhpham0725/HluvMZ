@@ -24,6 +24,21 @@
         `;
     }
 
+    async function refreshCurrentUser() {
+        const user = HluvStorage.getCurrentUser();
+        if (!user?.id || !window.HluvUserService?.profile) return user;
+        try {
+            const fresh = await HluvUserService.profile(user.id);
+            if (!fresh) return user;
+            const merged = { ...user, ...fresh };
+            HluvStorage.setCurrentUser(merged);
+            return merged;
+        } catch (error) {
+            console.warn('Không cập nhật được thông tin user cho header.', error);
+            return user;
+        }
+    }
+
     function notificationMarkup() {
         const user = HluvStorage.getCurrentUser();
         if (!user) return '';
@@ -75,7 +90,7 @@
     }
 
     function saveBroadcastIds(userId, ids) {
-        localStorage.setItem(broadcastReadKey(userId), JSON.stringify([...new Set(ids.map(Number).filter(Boolean))]));
+        localStorage.setItem(broadcastReadKey(userId), JSON.stringify([...new Set(ids.map(String).filter(Boolean))]));
     }
 
     function renderNotificationList(list, user) {
@@ -88,8 +103,8 @@
         box.innerHTML = list.map((item) => {
             const href = item.post_id ? `article.html?id=${encodeURIComponent(item.post_id)}` : '#';
             const linkAttrs = item.post_id ? `href="${href}"` : 'href="#" aria-disabled="true"';
-            const isBroadcastUnread = !item.user_id && !readBroadcastIds(user.id).includes(Number(item.id));
-            const unread = !item.is_read || isBroadcastUnread;
+            const readIds = readBroadcastIds(user.id).map(String);
+            const unread = !readIds.includes(String(item.id)) && (!item.user_id || !item.is_read);
             return `
                 <a class="notification-item ${unread ? 'unread' : ''}" ${linkAttrs}>
                     <span class="notification-icon">${notificationIcon(item.type)}</span>
@@ -110,10 +125,10 @@
         if (!user || !window.HluvApi?.notifications) return;
         try {
             const list = await HluvApi.notifications.list(user.id);
-            const readBroadcasts = readBroadcastIds(user.id);
+            const readBroadcasts = readBroadcastIds(user.id).map(String);
             const unread = list.filter((item) => {
-                if (!item.user_id) return !readBroadcasts.includes(Number(item.id));
-                return !item.is_read;
+                if (readBroadcasts.includes(String(item.id))) return false;
+                return !item.user_id || !item.is_read;
             }).length;
             if (count) {
                 count.hidden = unread <= 0;
@@ -121,8 +136,8 @@
             }
             renderNotificationList(list, user);
             if (markRead && list.length) {
-                const broadcastIds = list.filter((item) => !item.user_id).map((item) => Number(item.id));
-                saveBroadcastIds(user.id, readBroadcasts.concat(broadcastIds));
+                const readIds = list.map((item) => String(item.id));
+                saveBroadcastIds(user.id, readBroadcasts.concat(readIds));
                 await HluvApi.notifications.markRead(user.id).catch((error) => console.warn('Không đánh dấu đã đọc.', error));
                 if (count) count.hidden = true;
             }
@@ -180,9 +195,10 @@
         loadNotifications(false);
     }
 
-    function renderHeader() {
+    async function renderHeader() {
         const header = document.querySelector('.site-header') || document.getElementById('site-header');
         if (!header || document.body.classList.contains('auth-page')) return;
+        await refreshCurrentUser();
         if (!document.querySelector('.page-bubbles')) {
             header.insertAdjacentHTML('beforebegin', `
                 <div class="bubble-container page-bubbles" aria-hidden="true"></div>
