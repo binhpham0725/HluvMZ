@@ -218,6 +218,42 @@
         return data;
     }
 
+    async function supabaseRpc(functionName, body = {}, allowRefreshRetry = true) {
+        const config = supabaseConfig();
+        const token = await getSupabaseAccessToken();
+        let response;
+        try {
+            response = await fetch(`${config.url}/rest/v1/rpc/${functionName}`, {
+                method: 'POST',
+                headers: {
+                    apikey: config.key,
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+        } catch (error) {
+            throw new ApiError(HLUV_MESSAGES.networkError, 0, error);
+        }
+
+        const data = await parseJsonResponse(response);
+        if (!response.ok) {
+            if (allowRefreshRetry && isJwtExpiredPayload(data)) {
+                await refreshAuthSession();
+                return supabaseRpc(functionName, body, false);
+            }
+            const text = `${data?.message || ''} ${data?.error || ''} ${data?.details || ''}`.toLowerCase();
+            if (text.includes(functionName.toLowerCase())) {
+                throw new ApiError(`Chưa có hàm Supabase ${functionName}. Hãy chạy lại supabase_migration.sql trong SQL Editor rồi thử lại.`, response.status, data);
+            }
+            if (text.includes('row-level security') || text.includes('permission denied')) {
+                throw new ApiError('Supabase đang chặn quyền cập nhật cấp bậc. Hãy chạy lại supabase_migration.sql trong SQL Editor rồi thử lại.', response.status, data);
+            }
+            throw new ApiError(data?.message || data?.error || `Lỗi Supabase RPC (${response.status}).`, response.status, data);
+        }
+        return data;
+    }
+
     async function supabaseAuth(path, body, accessToken) {
         const config = supabaseConfig();
         let response;
@@ -1038,6 +1074,50 @@
         return { success: true, deleted: rows?.length || 0 };
     }
 
+    async function updateUserRankByAdmin(payload = {}) {
+        const admin = await fetchUserById(payload.admin_id);
+        const user = await fetchUserById(payload.user_id);
+        if (!isAdminUser(admin)) throw new ApiError('Admin required', 403);
+        if (!user) throw new ApiError('User not found', 404);
+        if (isAdminUser(user)) throw new ApiError('Không chỉnh cấp tài khoản admin', 400);
+
+        const isAutoRank = payload.rank === 'auto';
+        const manualRank = isAutoRank ? rankFromXp(user.xp || 0) : normalizeRank(payload.rank);
+        if (!manualRank) throw new ApiError('Rank invalid', 400);
+
+        const rows = await supabaseRest('users', {
+            method: 'PATCH',
+            params: { id: `eq.${Number(user.id)}` },
+            body: {
+                rank: manualRank,
+                rank_manual: !isAutoRank,
+                updated_at: new Date().toISOString()
+            },
+            prefer: 'return=representation'
+        }).catch(async (error) => {
+            const text = `${error?.message || ''} ${error?.details?.message || ''}`.toLowerCase();
+            if (text.includes('row-level security') || text.includes('permission denied')) return [];
+            throw error;
+        });
+
+        if (rows?.[0]) {
+            return { success: true, user: publicUser(rows[0]) };
+        }
+
+        await supabaseRpc('admin_update_user_rank', {
+            p_admin_id: Number(admin.id),
+            p_user_id: Number(user.id),
+            p_rank: manualRank,
+            p_rank_manual: !isAutoRank
+        });
+
+        const updated = await fetchUserById(user.id);
+        if (!updated || updated.rank !== manualRank || Boolean(updated.rank_manual) !== !isAutoRank) {
+            throw new ApiError('Chưa cập nhật được cấp bậc. Hãy chạy lại supabase_migration.sql trong Supabase SQL Editor rồi thử lại.', 403);
+        }
+        return { success: true, user: publicUser(updated) };
+    }
+
     async function deleteUserByAdmin(adminId, userId) {
         const admin = await fetchUserById(adminId);
         const user = await fetchUserById(userId);
@@ -1103,21 +1183,7 @@
             }
             if (action === 'stats') return userStats(params.user_id);
             if (action === 'add_xp') return addUserXp(options.body?.user_id, options.body?.xp);
-            if (action === 'update_rank') {
-                const admin = await fetchUserById(options.body?.admin_id);
-                const user = await fetchUserById(options.body?.user_id);
-                if (!isAdminUser(admin)) throw new ApiError('Admin required', 403);
-                if (isAdminUser(user)) throw new ApiError('Không chỉnh cấp tài khoản admin', 400);
-                const manualRank = options.body?.rank === 'auto' ? rankFromXp(user.xp || 0) : normalizeRank(options.body?.rank);
-                if (!manualRank) throw new ApiError('Rank invalid', 400);
-                const rows = await supabaseRest('users', {
-                    method: 'PATCH',
-                    params: { id: `eq.${Number(user.id)}` },
-                    body: { rank: manualRank, rank_manual: options.body?.rank !== 'auto', updated_at: new Date().toISOString() },
-                    prefer: 'return=representation'
-                });
-                return { success: true, user: publicUser(rows?.[0]) };
-            }
+            if (action === 'update_rank') return updateUserRankByAdmin(options.body || {});
             if (action === 'update') return updateUser(options.body || {});
             if (action === 'verify-password') return verifyPassword(options.body?.id, options.body?.password);
             if (action === 'change-password') return changePassword(options.body?.id, options.body?.current_password, options.body?.new_password);

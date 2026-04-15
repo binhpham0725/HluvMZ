@@ -159,3 +159,66 @@ using (
   )
 )
 with check (true);
+
+drop function if exists public.admin_update_user_rank(bigint, bigint, text, boolean);
+
+create or replace function public.admin_update_user_rank(
+  p_admin_id bigint,
+  p_user_id bigint,
+  p_rank text,
+  p_rank_manual boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  admin_record public.users;
+  target_record public.users;
+begin
+  select *
+  into admin_record
+  from public.users
+  where id = p_admin_id
+  limit 1;
+
+  if admin_record.id is null
+    or not (
+      admin_record.role = 'admin'
+      or lower(admin_record.email) = 'admin@webtapchi.local'
+    )
+  then
+    raise exception 'Admin required' using errcode = '42501';
+  end if;
+
+  select *
+  into target_record
+  from public.users
+  where id = p_user_id
+  limit 1;
+
+  if target_record.id is null then
+    raise exception 'User not found' using errcode = 'P0002';
+  end if;
+
+  if target_record.role = 'admin'
+    or lower(target_record.email) = 'admin@webtapchi.local'
+  then
+    raise exception 'Cannot update admin rank' using errcode = '42501';
+  end if;
+
+  if p_rank not in ('Vô Gia Cư', 'Bần Nông', 'Thường Dân', 'Học Sĩ', 'Quý Tộc', 'Vương Giả') then
+    raise exception 'Rank invalid' using errcode = '22023';
+  end if;
+
+  update public.users
+  set
+    rank = p_rank,
+    rank_manual = p_rank_manual,
+    updated_at = now()
+  where id = p_user_id;
+end;
+$$;
+
+grant execute on function public.admin_update_user_rank(bigint, bigint, text, boolean) to authenticated;

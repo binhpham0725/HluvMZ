@@ -185,6 +185,7 @@ File này bổ sung:
 - Cột `comments.parent_id` để trả lời bình luận dạng luồng.
 - Bảng `notifications` để lưu thông báo like, comment, reply và broadcast từ admin.
 - Policy cho admin cập nhật cấp bậc và xóa user thường.
+- Hàm `admin_update_user_rank` để admin cấp tay các bậc đặc biệt như `Vô Gia Cư` và `Vương Giả` khi RLS chặn cập nhật trực tiếp.
 - Policy cho user tạo/xóa bình luận của chính mình.
 - Policy cho user xem thông báo của mình và admin gửi thông báo hệ thống.
 
