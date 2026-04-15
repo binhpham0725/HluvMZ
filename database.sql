@@ -68,6 +68,24 @@ CREATE TABLE IF NOT EXISTS comments (
     FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NULL,
+    actor_id INT UNSIGNED NULL,
+    actor_name VARCHAR(120) NULL,
+    type VARCHAR(40) NOT NULL DEFAULT 'system',
+    post_id INT UNSIGNED NULL,
+    comment_id INT UNSIGNED NULL,
+    parent_comment_id INT UNSIGNED NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notifications_user (user_id, is_read, created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Migration nhe cho database da tao truoc do, giup avatar/anh bai viet luu duoc Data URL.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(20) NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS birthdate DATE NULL;

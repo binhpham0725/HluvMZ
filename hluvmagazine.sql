@@ -67,6 +67,26 @@ INSERT INTO `comments` (`id`, `post_id`, `user_id`, `parent_id`, `content`, `cre
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED DEFAULT NULL,
+  `actor_id` int(10) UNSIGNED DEFAULT NULL,
+  `actor_name` varchar(120) DEFAULT NULL,
+  `type` varchar(40) NOT NULL DEFAULT 'system',
+  `post_id` int(10) UNSIGNED DEFAULT NULL,
+  `comment_id` int(10) UNSIGNED DEFAULT NULL,
+  `parent_comment_id` int(10) UNSIGNED DEFAULT NULL,
+  `message` text NOT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `likes`
 --
 
@@ -165,7 +185,17 @@ ALTER TABLE `bookmarks`
 ALTER TABLE `comments`
   ADD PRIMARY KEY (`id`),
   ADD KEY `post_id` (`post_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `parent_id` (`parent_id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_notifications_user` (`user_id`,`is_read`,`created_at`),
+  ADD KEY `actor_id` (`actor_id`),
+  ADD KEY `post_id` (`post_id`);
 
 --
 -- Indexes for table `likes`
@@ -206,6 +236,12 @@ ALTER TABLE `comments`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `likes`
 --
 ALTER TABLE `likes`
@@ -229,6 +265,22 @@ ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `rank` varchar(50) NOT NULL DEFAULT
 ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `rank_manual` tinyint(1) NOT NULL DEFAULT 0;
 ALTER TABLE `comments` ADD COLUMN IF NOT EXISTS `parent_id` int(10) UNSIGNED DEFAULT NULL;
 
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) UNSIGNED DEFAULT NULL,
+  `actor_id` int(10) UNSIGNED DEFAULT NULL,
+  `actor_name` varchar(120) DEFAULT NULL,
+  `type` varchar(40) NOT NULL DEFAULT 'system',
+  `post_id` int(10) UNSIGNED DEFAULT NULL,
+  `comment_id` int(10) UNSIGNED DEFAULT NULL,
+  `parent_comment_id` int(10) UNSIGNED DEFAULT NULL,
+  `message` text NOT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_notifications_user` (`user_id`,`is_read`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Constraints for dumped tables
 --
@@ -247,6 +299,14 @@ ALTER TABLE `comments`
   ADD CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `comments_ibfk_3` FOREIGN KEY (`parent_id`) REFERENCES `comments` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`actor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `notifications_ibfk_3` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `likes`

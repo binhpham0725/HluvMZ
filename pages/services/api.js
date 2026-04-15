@@ -114,6 +114,11 @@
         return text.includes(column.toLowerCase()) && (text.includes('column') || text.includes('schema cache'));
     }
 
+    function isMissingTableError(error, table) {
+        const text = `${error?.message || ''} ${error?.details?.message || ''} ${error?.details?.details || ''} ${error?.details?.hint || ''}`.toLowerCase();
+        return text.includes(table.toLowerCase()) && (text.includes('relation') || text.includes('schema cache') || text.includes('does not exist'));
+    }
+
     async function refreshAuthSession() {
         const session = getAuthSession();
         if (!session?.refresh_token) throw new ApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
@@ -270,6 +275,84 @@
             }
         });
         return rows?.[0] || null;
+    }
+
+    async function createNotification(payload = {}) {
+        const body = {
+            user_id: payload.user_id ? Number(payload.user_id) : null,
+            actor_id: payload.actor_id ? Number(payload.actor_id) : null,
+            actor_name: String(payload.actor_name || '').trim(),
+            type: String(payload.type || 'system').trim(),
+            post_id: payload.post_id ? Number(payload.post_id) : null,
+            comment_id: payload.comment_id ? Number(payload.comment_id) : null,
+            parent_comment_id: payload.parent_comment_id ? Number(payload.parent_comment_id) : null,
+            message: String(payload.message || '').trim(),
+            is_read: false
+        };
+        if (!body.message) return { success: false };
+        if (body.user_id && body.actor_id && Number(body.user_id) === Number(body.actor_id)) return { success: false };
+
+        try {
+            const rows = await supabaseRest('notifications', {
+                method: 'POST',
+                body,
+                prefer: 'return=representation'
+            });
+            return { success: true, notification: rows?.[0] };
+        } catch (error) {
+            if (isMissingTableError(error, 'notifications')) {
+                console.warn('Bảng notifications chưa tồn tại. Hãy chạy supabase_migration.sql.', error);
+                return { success: false, skipped: true };
+            }
+            throw error;
+        }
+    }
+
+    async function listNotifications(userId) {
+        if (!userId) return [];
+        try {
+            return await supabaseRest('notifications', {
+                params: {
+                    select: '*',
+                    or: `(user_id.eq.${Number(userId)},user_id.is.null)`,
+                    order: 'created_at.desc,id.desc',
+                    limit: 30
+                }
+            });
+        } catch (error) {
+            if (isMissingTableError(error, 'notifications')) return [];
+            throw error;
+        }
+    }
+
+    async function markNotificationsRead(userId) {
+        if (!userId) return { success: false };
+        try {
+            await supabaseRest('notifications', {
+                method: 'PATCH',
+                params: { user_id: `eq.${Number(userId)}`, is_read: 'eq.false' },
+                body: { is_read: true },
+                prefer: 'return=minimal'
+            });
+            return { success: true };
+        } catch (error) {
+            if (isMissingTableError(error, 'notifications')) return { success: false, skipped: true };
+            throw error;
+        }
+    }
+
+    async function broadcastNotification(adminId, message) {
+        const admin = await fetchUserById(adminId);
+        if (!isAdminUser(admin)) throw new ApiError('Admin required', 403);
+        const clean = String(message || '').trim();
+        if (!clean) throw new ApiError('Vui lòng nhập nội dung thông báo.', 400);
+        return createNotification({
+            user_id: null,
+            actor_id: admin.id,
+            actor_name: admin.name || admin.email || 'Admin',
+            type: 'admin',
+            message: clean
+        });
     }
 
     async function fetchProfileById(id) {
@@ -680,6 +763,15 @@
         const post = (await fetchPostsByIds([postId]))[0];
         if (post?.user_id && Number(post.user_id) !== Number(userId)) {
             await addUserXp(post.user_id, 2).catch((error) => console.warn('Không cộng XP tác giả like.', error));
+            const actor = await fetchUserById(userId).catch(() => null);
+            await createNotification({
+                user_id: post.user_id,
+                actor_id: userId,
+                actor_name: actor?.name || actor?.email || 'Một người dùng',
+                type: 'like',
+                post_id: post.id,
+                message: `${actor?.name || actor?.email || 'Một người dùng'} đã thích bài viết "${post.title || 'không có tiêu đề'}".`
+            }).catch((error) => console.warn('Không tạo được thông báo like.', error));
         }
         return { liked: true };
     }
@@ -719,6 +811,46 @@
                 body,
                 prefer: 'return=representation'
             });
+            const comment = rows?.[0] || {};
+            const actor = await fetchUserById(body.user_id).catch(() => null);
+            const post = (await fetchPostsByIds([body.post_id]).catch(() => []))[0];
+            const actorName = actor?.name || actor?.email || 'Một người dùng';
+            const notifiedRecipients = new Set();
+
+            if (parentId) {
+                const parentRows = await supabaseRest('comments', {
+                    params: { select: 'id,user_id', id: `eq.${parentId}`, limit: 1 }
+                }).catch(() => []);
+                const parent = parentRows?.[0];
+                if (parent?.user_id && Number(parent.user_id) !== Number(body.user_id)) {
+                    await createNotification({
+                        user_id: parent.user_id,
+                        actor_id: body.user_id,
+                        actor_name: actorName,
+                        type: 'reply',
+                        post_id: body.post_id,
+                        comment_id: comment.id,
+                        parent_comment_id: parentId,
+                        message: `${actorName} đã trả lời bình luận của bạn trong bài "${post?.title || 'không có tiêu đề'}".`
+                    }).catch((error) => console.warn('Không tạo được thông báo reply.', error));
+                    notifiedRecipients.add(Number(parent.user_id));
+                }
+            }
+
+            if (post?.user_id && Number(post.user_id) !== Number(body.user_id) && !notifiedRecipients.has(Number(post.user_id))) {
+                await createNotification({
+                    user_id: post.user_id,
+                    actor_id: body.user_id,
+                    actor_name: actorName,
+                    type: parentId ? 'reply_on_post' : 'comment',
+                    post_id: body.post_id,
+                    comment_id: comment.id,
+                    parent_comment_id: parentId || null,
+                    message: parentId
+                        ? `${actorName} đã trả lời một bình luận trong bài viết "${post.title || 'không có tiêu đề'}".`
+                        : `${actorName} đã bình luận bài viết "${post.title || 'không có tiêu đề'}".`
+                }).catch((error) => console.warn('Không tạo được thông báo comment.', error));
+            }
             return { success: true, id: rows?.[0]?.id, comment: rows?.[0] };
         } catch (error) {
             if (!parentId || !isMissingColumnError(error, 'parent_id')) throw error;
@@ -872,6 +1004,12 @@
             if (action === 'create') return createComment(options.body || {});
             if (action === 'delete') return deleteComment(params.id, params.user_id);
         }
+        if (endpoint === 'notifications.php') {
+            if (action === 'list') return listNotifications(params.user_id);
+            if (action === 'read') return markNotificationsRead(options.body?.user_id || params.user_id);
+            if (action === 'broadcast') return broadcastNotification(options.body?.admin_id, options.body?.message);
+            if (action === 'create') return createNotification(options.body || {});
+        }
         throw new ApiError('Action not found', 404, { endpoint, action });
     }
 
@@ -945,6 +1083,17 @@
             },
             toggle(userId, postId) {
                 return request('likes.php', { action: 'toggle' }, { method: 'POST', body: { user_id: userId, post_id: postId } });
+            }
+        },
+        notifications: {
+            list(userId) {
+                return request('notifications.php', { action: 'list', user_id: userId });
+            },
+            markRead(userId) {
+                return request('notifications.php', { action: 'read' }, { method: 'POST', body: { user_id: userId } });
+            },
+            broadcast(adminId, message) {
+                return request('notifications.php', { action: 'broadcast' }, { method: 'POST', body: { admin_id: adminId, message } });
             }
         }
     };

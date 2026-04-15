@@ -26,6 +26,22 @@ function isAdminUser(mysqli $mysqli, int $userId): bool {
     return ($user['role'] ?? '') === 'admin' || strtolower($user['email'] ?? '') === 'admin@webtapchi.local';
 }
 
+function createNotification(mysqli $mysqli, ?int $userId, int $actorId, string $type, string $message, int $postId = 0, int $commentId = 0, int $parentCommentId = 0): void {
+    if ($userId && $userId === $actorId) return;
+    $exists = $mysqli->query("SHOW TABLES LIKE 'notifications'");
+    if (!$exists || $exists->num_rows === 0) return;
+
+    $actor = $mysqli->prepare('SELECT name,email FROM users WHERE id=? LIMIT 1');
+    $actor->bind_param('i', $actorId);
+    $actor->execute();
+    $actorRow = $actor->get_result()->fetch_assoc();
+    $actorName = $actorRow['name'] ?: ($actorRow['email'] ?: 'Một người dùng');
+
+    $stmt = $mysqli->prepare('INSERT INTO notifications (user_id,actor_id,actor_name,type,post_id,comment_id,parent_comment_id,message) VALUES (?,?,?,?,?,?,?,?)');
+    $stmt->bind_param('iissiiis', $userId, $actorId, $actorName, $type, $postId, $commentId, $parentCommentId, $message);
+    $stmt->execute();
+}
+
 if ($action === 'list' && $method === 'GET') {
     $postId = intval($_GET['post_id'] ?? 0);
     if (!$postId) jsonResult(['error' => 'post_id required'], 400);
@@ -69,8 +85,33 @@ if ($action === 'create' && $method === 'POST') {
     $stmt = $mysqli->prepare('INSERT INTO comments (post_id,user_id,parent_id,content) VALUES (?,?,?,?)');
     $stmt->bind_param('iiis', $postId, $userId, $parentValue, $content);
     $stmt->execute();
+    $commentId = $stmt->insert_id;
 
-    jsonResult(['success' => true, 'id' => $stmt->insert_id]);
+    $postStmt = $mysqli->prepare('SELECT user_id,title FROM posts WHERE id=? LIMIT 1');
+    $postStmt->bind_param('i', $postId);
+    $postStmt->execute();
+    $post = $postStmt->get_result()->fetch_assoc();
+    $postOwnerId = intval($post['user_id'] ?? 0);
+    $postTitle = $post['title'] ?? 'không có tiêu đề';
+    $notified = [];
+
+    if ($parentId) {
+        $parentStmt = $mysqli->prepare('SELECT user_id FROM comments WHERE id=? LIMIT 1');
+        $parentStmt->bind_param('i', $parentId);
+        $parentStmt->execute();
+        $parent = $parentStmt->get_result()->fetch_assoc();
+        $parentOwnerId = intval($parent['user_id'] ?? 0);
+        if ($parentOwnerId && $parentOwnerId !== $userId) {
+            createNotification($mysqli, $parentOwnerId, $userId, 'reply', 'Có người đã trả lời bình luận của bạn trong bài "'.$postTitle.'".', $postId, $commentId, $parentId);
+            $notified[] = $parentOwnerId;
+        }
+    }
+
+    if ($postOwnerId && $postOwnerId !== $userId && !in_array($postOwnerId, $notified, true)) {
+        createNotification($mysqli, $postOwnerId, $userId, $parentId ? 'reply_on_post' : 'comment', $parentId ? 'Có người đã trả lời bình luận trong bài "'.$postTitle.'".' : 'Có người đã bình luận bài viết "'.$postTitle.'".', $postId, $commentId, $parentId);
+    }
+
+    jsonResult(['success' => true, 'id' => $commentId]);
 }
 
 if ($action === 'delete' && $method === 'DELETE') {

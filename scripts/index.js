@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const categoryCountEl = document.getElementById('home-category-count');
     const searchInput = document.getElementById('home-search-input');
     const searchBtn = document.getElementById('home-search-btn');
+    const postBtn = document.getElementById('home-post-btn');
 
     function renderQuickCategories() {
         filtersEl.innerHTML = '';
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     renderQuickCategories();
+    if (postBtn && !HluvUI.getCurrentUser()) postBtn.href = 'login.html';
     HluvUI.renderState(latestEl, 'Đang tải bài mới...');
     HluvUI.renderState(trendingEl, 'Đang tải xu hướng...');
 
